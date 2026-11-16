@@ -115,17 +115,15 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     override val root = constraintLayout {
         if (cherry) {
             clipChildren = false
-            setBackgroundColor(0xFF353535.toInt())
+            setBackgroundColor(0xFF363636.toInt())
             val stroke = dp(1f / 3).roundToInt().coerceAtLeast(1)
             val divider = dp(37) - stroke
             add(View(ctx).apply { setBackgroundColor(0xFF434343.toInt()) }, lParams(matchParent, divider) {
                 topOfParent()
             })
-            listOf(0xFF4F4F4F.toInt(), 0xFF3B3B3B.toInt()).forEachIndexed { index, color ->
-                add(View(ctx).apply { setBackgroundColor(color) }, lParams(matchParent, stroke) {
-                    topOfParent(divider + index * stroke)
-                })
-            }
+            add(View(ctx).apply { setBackgroundColor(0xFF4E4E4E.toInt()) }, lParams(matchParent, stroke) {
+                topOfParent(divider)
+            })
         }
         add(
             tabLayout,
@@ -168,7 +166,7 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
     private val leftExtension = context.dp(1f / 3f)
     private val rightExtension = context.dp(4f / 3f)
     private val topInset = context.dp(1f / 6f)
-    private val bottomInset = context.dp(2f / 3f)
+    private val bottomInset = context.dp(1f / 3f)
     private val path = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var opacity = 255
@@ -188,7 +186,7 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
 
     override fun draw(canvas: Canvas) {
         paint.style = Paint.Style.FILL
-        paint.color = 0xFF353535.toInt()
+        paint.color = 0xFF363636.toInt()
         paint.alpha = opacity
         canvas.drawPath(path, paint)
 
@@ -198,7 +196,7 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
         val right = bounds.right + overhang + rightExtension + horizontalOffset
         val inset = curveWidth.coerceAtMost(bounds.width() / 2f)
         val saved = canvas.save()
-        canvas.clipRect(left - strokeWidth, top, right + strokeWidth, bottom + strokeWidth / 2f)
+        canvas.clipRect(left - strokeWidth, top, right + strokeWidth, bottom - edgeInset / 3f)
         paint.style = Paint.Style.STROKE
         paint.color = 0xFFB3B3B3.toInt()
         paint.alpha = (73 * opacity / 255f).roundToInt()
