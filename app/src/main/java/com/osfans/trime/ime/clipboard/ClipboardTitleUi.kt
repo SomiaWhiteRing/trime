@@ -23,6 +23,7 @@ import com.osfans.trime.data.theme.model.ToolBar
 import com.osfans.trime.ime.bar.ui.ToolButton
 import com.osfans.trime.ime.core.InputTabLayout
 import splitties.dimensions.dp
+import splitties.views.dsl.constraintlayout.bottomOfParent
 import splitties.views.dsl.constraintlayout.centerHorizontally
 import splitties.views.dsl.constraintlayout.centerVertically
 import splitties.views.dsl.constraintlayout.constraintLayout
@@ -78,18 +79,37 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
             cornerRadii = floatArrayOf(0f, 0f, radius, radius, 0f, 0f, 0f, 0f)
         }
     }
-    private val settingsTitle = TextView(ctx).apply {
-        setText(R.string.cherry_clipboard_settings)
-        textSize = 16f
-        setTextColor(0xFFB3B3B3.toInt())
+    private val settingsHeader = constraintLayout {
+        setBackgroundColor(0xFF434343.toInt())
         visibility = View.GONE
+        val stroke = dp(0.26f).roundToInt().coerceAtLeast(1)
+        add(View(ctx).apply { setBackgroundColor(0xFF4F4F4F.toInt()) }, lParams(matchParent, stroke) {
+            topOfParent()
+        })
+        add(View(ctx).apply { setBackgroundColor(0xFF4F4F4F.toInt()) }, lParams(matchParent, stroke) {
+            bottomOfParent()
+        })
+        add(TextView(ctx).apply {
+            setText(R.string.cherry_clipboard_settings)
+            textSize = 16f
+            setTextColor(0xFFB3B3B3.toInt())
+        }, lParams(wrapContent, wrapContent) {
+            centerHorizontally()
+            centerVertically()
+        })
     }
 
     fun setSettingsOpen(open: Boolean) {
         tabLayout.visibility = if (open) View.GONE else View.VISIBLE
         actionButton.visibility = if (open) View.GONE else View.VISIBLE
         menuDivider.visibility = actionButton.visibility
-        settingsTitle.visibility = if (open) View.VISIBLE else View.GONE
+        settingsHeader.visibility = if (open) View.VISIBLE else View.GONE
+        backButton?.apply {
+            translationX = if (open) dp(4f) else 0f
+            translationY = dp(if (open) -5f / 3 else 1f / 3)
+            scaleX = if (open) 0.92f else 1f
+            scaleY = scaleX
+        }
     }
 
     override val root = constraintLayout {
@@ -119,9 +139,8 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
                 endOfParent(dp(size) - dp(8f / 3).roundToInt())
                 topOfParent(dp(10f / 3).roundToInt())
             })
-            add(settingsTitle, lParams(wrapContent, wrapContent) {
-                centerHorizontally()
-                centerVertically()
+            add(settingsHeader, lParams(matchParent, dp(37)) {
+                topOfParent()
             })
         }
         backButton?.let {
