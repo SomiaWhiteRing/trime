@@ -13,6 +13,7 @@ import androidx.transition.TransitionManager
 import androidx.transition.TransitionSet
 import com.osfans.trime.R
 import com.osfans.trime.ime.broadcast.InputBroadcaster
+import com.osfans.trime.ime.candidates.unrolled.window.BaseUnrolledCandidateWindow
 import com.osfans.trime.ime.clipboard.ClipboardWindow
 import com.osfans.trime.ime.keyboard.CherryNumberWindow
 import com.osfans.trime.ime.keyboard.CherrySymbolsWindow
@@ -127,6 +128,7 @@ class BoardWindowManager(override val di: DI) : DIAware {
     private fun BoardWindow.isCherryPanel(): Boolean = when (this) {
         is CherryNumberWindow, is CherrySymbolsWindow -> true
         is ClipboardWindow -> usesCherryLayout
+        is BaseUnrolledCandidateWindow -> usesCherryLayout
         else -> false
     }
 

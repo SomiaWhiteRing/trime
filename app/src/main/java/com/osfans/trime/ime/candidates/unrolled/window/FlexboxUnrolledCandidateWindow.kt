@@ -7,6 +7,8 @@ package com.osfans.trime.ime.candidates.unrolled.window
 
 import android.view.Gravity
 import android.view.ViewGroup
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.transition.Slide
 import androidx.transition.Transition
 import com.google.android.flexbox.AlignItems
@@ -19,6 +21,7 @@ import com.osfans.trime.ime.candidates.unrolled.decoration.FlexboxHorizontalDeco
 import com.osfans.trime.ime.window.BoardWindow
 import org.kodein.di.DI
 import splitties.dimensions.dp
+import splitties.views.dsl.core.matchParent
 import splitties.views.dsl.core.wrapContent
 
 class FlexboxUnrolledCandidateWindow(di: DI) : BaseUnrolledCandidateWindow(di) {
@@ -34,11 +37,14 @@ class FlexboxUnrolledCandidateWindow(di: DI) : BaseUnrolledCandidateWindow(di) {
             ): CandidateViewHolder = super.onCreateViewHolder(parent, viewType).apply {
                 itemView.apply {
                     minimumWidth = dp(40)
-                    val itemHeight = dp(theme.style.run { candidateViewHeight + commentHeight })
                     layoutParams =
-                        FlexboxLayoutManager
-                            .LayoutParams(wrapContent, itemHeight)
-                            .apply { flexGrow = 1f }
+                        if (usesCherryLayout) {
+                            RecyclerView.LayoutParams(matchParent, dp(43))
+                        } else {
+                            FlexboxLayoutManager
+                                .LayoutParams(wrapContent, dp(theme.style.run { candidateViewHeight + commentHeight }))
+                                .apply { flexGrow = 1f }
+                        }
                 }
             }
 
@@ -52,10 +58,14 @@ class FlexboxUnrolledCandidateWindow(di: DI) : BaseUnrolledCandidateWindow(di) {
         }
     }
 
-    override val layoutManager by lazy {
-        FlexboxLayoutManager(context).apply {
-            justifyContent = JustifyContent.SPACE_AROUND
-            alignItems = AlignItems.FLEX_START
+    override val layoutManager: RecyclerView.LayoutManager by lazy {
+        if (usesCherryLayout) {
+            GridLayoutManager(context, 2)
+        } else {
+            FlexboxLayoutManager(context).apply {
+                justifyContent = JustifyContent.SPACE_AROUND
+                alignItems = AlignItems.FLEX_START
+            }
         }
     }
 
@@ -63,7 +73,11 @@ class FlexboxUnrolledCandidateWindow(di: DI) : BaseUnrolledCandidateWindow(di) {
         recyclerView.apply {
             adapter = this@FlexboxUnrolledCandidateWindow.adapter
             layoutManager = this@FlexboxUnrolledCandidateWindow.layoutManager
-            addItemDecoration(FlexboxHorizontalDecoration(separatorDrawable))
+            if (usesCherryLayout) {
+                isVerticalScrollBarEnabled = true
+            } else {
+                addItemDecoration(FlexboxHorizontalDecoration(separatorDrawable))
+            }
         }
     }
 }

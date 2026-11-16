@@ -53,6 +53,9 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
     protected val theme: Theme
         get() = scope.theme
 
+    internal val usesCherryLayout: Boolean
+        get() = "cherry_edit" in theme.presetKeyboards
+
     private lateinit var lifecycleCoroutineScope: LifecycleCoroutineScope
     private lateinit var candidateLayout: UnrolledCandidateLayout
 
@@ -122,8 +125,8 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
                     } else {
                         candidateLayout.resetPosition()
                         adapter.refreshWith(
-                            offset = it,
-                            highlightedIndex = compactCandidate.adapter.highlightedIdx,
+                            offset = if (usesCherryLayout) 0 else it,
+                            highlightedIndex = if (usesCherryLayout) -1 else compactCandidate.adapter.highlightedIdx,
                         )
                     }
                 }
