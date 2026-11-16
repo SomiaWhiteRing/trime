@@ -49,11 +49,27 @@ parser.add_argument("--clipboard-phrase-filters", nargs=3, metavar=("FAVORITES",
                     help="1116 x 102 common-phrase filter strips from y=1754 in each selected state")
 parser.add_argument("--clipboard-phrase-cards", nargs=3, metavar=("PLAIN", "FAVORITE", "DELETE"), type=Path,
                     help="1116 x 2480 portrait snapshots of the expanded CHERRY phrase card and delete confirmation")
+parser.add_argument("--clipboard-phrase-random", type=Path,
+                    help="1116 x 826 CHERRY common-phrase random grid from y=1630")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.clipboard_phrase_random:
+    reference = Image.open(args.clipboard_phrase_random).convert("RGB")
+    if reference.size != (1116, 826):
+        raise ValueError("Expected a 1116 x 826 CHERRY common-phrase grid")
+    for name, bounds in (
+        ("favorites", (24, 129, 540, 258)),
+        ("recent", (558, 129, 1092, 258)),
+        ("default", (24, 276, 540, 405)),
+    ):
+        tile = reference.crop(bounds)
+        tile.paste((67, 67, 67), (tile.width - 74, 46, tile.width - 38, 86))
+        tile.save(assets / f"clipboard-phrase-random-{name}.png")
+
 
 if args.clipboard_phrase_cards:
     plain, favorite, delete = [Image.open(path).convert("RGB") for path in args.clipboard_phrase_cards]

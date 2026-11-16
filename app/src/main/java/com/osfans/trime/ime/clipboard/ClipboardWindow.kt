@@ -109,6 +109,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
     private val phraseFilter = MutableStateFlow(PhraseFilter.DEFAULT)
     private var displayedPhrases = emptyList<DatabaseBean>()
+    private var phraseGroups = emptyMap<PhraseFilter, List<DatabaseBean>>()
+    private var randomPhraseCounts = emptyMap<PhraseFilter, TextView>()
     private var phraseSequenceIndex = 0
     private var undoStagedPhrase: (() -> Boolean)? = null
     private lateinit var phraseSendButton: View
@@ -753,6 +755,78 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
+    private fun createRandomPhraseGrid(): ScrollView {
+        val counts = mutableMapOf<PhraseFilter, TextView>()
+        val rows = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(context.dp(8), context.dp(5f / 3f).roundToInt(), context.dp(8), 0)
+            for (pair in PhraseFilter.entries.chunked(2)) {
+                addView(LinearLayout(context).apply {
+                    for ((index, filter) in pair.withIndex()) {
+                        val count = TextView(context).apply {
+                            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                            textSize = 15f
+                            typeface = Typeface.DEFAULT_BOLD
+                            setTextColor(0xFFA0A0A0.toInt())
+                        }
+                        counts[filter] = count
+                        val card = FrameLayout(context).apply {
+                            val name = filter.name.lowercase()
+                            val artwork = scope.drawable("clipboard-phrase-random-$name.png")
+                            background = artwork ?: GradientDrawable().apply {
+                                setColor(0xFF434343.toInt())
+                                cornerRadius = context.dp(4f)
+                                setStroke(context.dp(1f / 3f).roundToInt().coerceAtLeast(1), 0xFF747474.toInt())
+                            }
+                            addView(TextView(context).apply {
+                                text = filter.text
+                                textSize = 14f
+                                gravity = Gravity.CENTER_VERTICAL
+                                setTextColor(if (artwork == null) 0xFFB3B3B3.toInt() else Color.TRANSPARENT)
+                            }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.MATCH_PARENT).apply {
+                                marginStart = context.dp(15)
+                            })
+                            addView(count, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.END).apply {
+                                marginEnd = context.dp(14)
+                            })
+                            setOnClickListener {
+                                val phrases = phraseGroups[filter].orEmpty()
+                                if (phrases.isEmpty()) return@setOnClickListener
+                                val bean = phrases.random()
+                                val text = bean.text ?: return@setOnClickListener
+                                if (service.commitText(text)) {
+                                    rememberPhrase(bean)
+                                    service.sendRecommendationInCurrentEditor()
+                                    if (clipboardReturnAfterPaste) windowManager.attachWindow(KeyboardWindow)
+                                }
+                            }
+                        }
+                        addView(FrameLayout(context).apply {
+                            addView(card, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT).apply {
+                                if (index == 0) marginEnd = context.dp(6)
+                            })
+                        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+                    }
+                    if (pair.size == 1) addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(43)).apply {
+                    bottomMargin = context.dp(6)
+                })
+            }
+        }
+        randomPhraseCounts = counts
+        updateRandomPhraseCounts()
+        return ScrollView(context).apply {
+            isVerticalScrollBarEnabled = false
+            addView(rows)
+        }
+    }
+
+    private fun updateRandomPhraseCounts() {
+        randomPhraseCounts.forEach { (filter, count) ->
+            count.text = phraseGroups[filter].orEmpty().size.toString()
+        }
+    }
+
     private fun updatePhraseSequence() {
         val visible = recommendationSendMode == CherrySendMode.SEQUENTIAL && phraseSequenceIndex in displayedPhrases.indices
         collectionBeansAdapter.sequencePosition = if (visible) phraseSequenceIndex else -1
@@ -817,6 +891,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 }
                 labels.forEach { (filter, label) -> label.setOnClickListener { select(filter) } }
                 select(phraseFilter.value)
+                val randomGrid = createRandomPhraseGrid()
+                fun showMode(mode: CherrySendMode) {
+                    val random = mode == CherrySendMode.RANDOM
+                    filters.visibility = if (random) View.GONE else View.VISIBLE
+                    recyclerView.visibility = if (random) View.GONE else View.VISIBLE
+                    randomGrid.visibility = if (random) View.VISIBLE else View.GONE
+                }
+                showMode(recommendationSendMode)
                 root.removeView(recyclerView)
                 root.addView(
                     LinearLayout(context).apply {
@@ -824,6 +906,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         addView(filters, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(34)))
                         addView(FrameLayout(context).apply {
                             addView(recyclerView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                            addView(randomGrid, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                             phraseSendButton = TextView(context).apply {
                                 contentDescription = context.getText(R.string.cherry_phrase_send)
                                 gravity = Gravity.CENTER
@@ -850,7 +933,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                             updatePhraseSequence()
                         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
                         addView(
-                            createPhraseSendFooter {
+                            createPhraseSendFooter { mode ->
+                                showMode(mode)
                                 phraseSequenceIndex = 0
                                 undoStagedPhrase = null
                                 updatePhraseSequence()
@@ -1095,14 +1179,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             val pages = if (usesCherryLayout) {
                 combine(phraseFilter, recentPhraseIds, CollectionHelper.observeRecords()) { filter, ids, records ->
                     val currentId = displayedPhrases.getOrNull(phraseSequenceIndex)?.id
-                    displayedPhrases = when (filter) {
-                        PhraseFilter.DEFAULT -> records
-                        PhraseFilter.FAVORITES -> records.filter { it.pinned }
-                        PhraseFilter.RECENT -> {
-                            val byId = records.associateBy { it.id }
-                            ids.mapNotNull(byId::get)
-                        }
-                    }
+                    val byId = records.associateBy { it.id }
+                    phraseGroups = mapOf(
+                        PhraseFilter.DEFAULT to records,
+                        PhraseFilter.FAVORITES to records.filter { it.pinned },
+                        PhraseFilter.RECENT to ids.mapNotNull(byId::get),
+                    )
+                    displayedPhrases = phraseGroups.getValue(filter)
+                    updateRandomPhraseCounts()
                     phraseSequenceIndex = displayedPhrases.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
                     updatePhraseSequence()
                     PagingData.from(displayedPhrases)
