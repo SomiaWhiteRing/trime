@@ -99,7 +99,7 @@ abstract class ClipboardAdapter(
                 return
             }
             if (cherry && enableCollection) {
-                bindExpansion(preview, content, listOf(
+                bindExpansion(preview, content, if (compact) 1 else 2, listOf(
                     Triple(R.string.word_segment, "segment") { onSegment(bean) },
                     Triple(R.string.cherry_clipboard_translate, "translate") { onTranslate(bean) },
                     Triple(R.string.cherry_clipboard_search, "search") { onSearch(bean) },

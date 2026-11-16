@@ -50,7 +50,7 @@ class ClipboardBeanUi(
         textView {
             minLines = 1
             maxLines = if (expandable) 1 else 4
-            textSize = if (cherry) 12f else 14f
+            textSize = if (expandable || !cherry) 14f else 12f
             typeface = theme.fonts.key
             if (cherry) setPaddingDp(8, 8, if (expandable) 37 else 8, 8) else setPaddingDp(8, 4, 8, 4)
             ellipsize = TextUtils.TruncateAt.END
@@ -139,7 +139,7 @@ class ClipboardBeanUi(
         pin.visibility = if (pinned) View.VISIBLE else View.GONE
     }
 
-    fun bindExpansion(preview: String, content: String, entries: List<Triple<Int, String, () -> Unit>>) {
+    fun bindExpansion(preview: String, content: String, previewLines: Int, entries: List<Triple<Int, String, () -> Unit>>) {
         checkbox.visibility = View.GONE
         expand.visibility = View.VISIBLE
         textView.setPaddingDp(8, 8, 37, 8)
@@ -171,7 +171,7 @@ class ClipboardBeanUi(
         }
         val setExpanded = { expanded: Boolean ->
             actionScroller.visibility = if (expanded) View.VISIBLE else View.GONE
-            textView.maxLines = if (expanded) 6 else 1
+            textView.maxLines = if (expanded) 6 else previewLines
             textView.text = if (expanded) content else preview
             expand.rotation = if (expanded) 180f else 0f
         }
