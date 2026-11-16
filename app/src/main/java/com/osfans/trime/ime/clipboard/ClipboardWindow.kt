@@ -755,7 +755,15 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 )
                 tabUi.label.text = title
             }
+            val tabName = listOf("history", "phrases", "recommend")[position]
+            val referenceText = listOf("剪贴板", "常用语", "推荐")[position]
+            val tabArtwork = if (isVivo && tabUi.label.text.toString() == referenceText) {
+                val idle = scope.drawable("clipboard-tab-$tabName-idle.png")
+                val active = scope.drawable("clipboard-tab-$tabName-active.png")
+                if (idle != null && active != null) idle to active else null
+            } else null
             tabUi.activeStyle = { active ->
+                tabUi.root.foreground = tabArtwork?.let { if (active) it.second else it.first }
                 val bold = active && !isVivo
                 tabUi.label.setTypeface(theme.fonts.candidate, if (bold) Typeface.BOLD else Typeface.NORMAL)
                 tabUi.label.scaleX = if (bold) 0.98f else 0.975f
@@ -768,6 +776,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 val baselineOffset = if (isVivo) -0.375f else if (bold) 2f / 3 else 0.625f
                 tabUi.label.translationY = context.dp(baselineOffset)
                 tabUi.label.setTextColor(when {
+                    tabArtwork != null -> Color.TRANSPARENT
                     !active -> 0xFFB3B3B3.toInt()
                     isVivo -> 0xFFA21E42.toInt()
                     else -> 0xFF9D1E42.toInt()

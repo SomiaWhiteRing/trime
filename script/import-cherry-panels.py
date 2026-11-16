@@ -21,6 +21,8 @@ parser.add_argument("--symbol-footer-pressed", nargs=2, action="append", default
                     help="1116 x 146 footer crop with a symbol key held. Repeat for each key.")
 parser.add_argument("--symbol-page-boundary", nargs=3, action="append", default=[], metavar=("KEY", "IDLE", "HELD"),
                     help="Idle and held 1116 x 146 footer crops for a disabled previous or next key")
+parser.add_argument("--clipboard-title-tabs", nargs=2, action="append", default=[], metavar=("SELECTED", "CAPTURE"),
+                    help="1116 x 114 title crop from y=1630 with history, phrases, or recommend selected")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -64,6 +66,24 @@ if args.clipboard_reference:
         if name == "menu":
             glyph.paste(reference.crop((997, 1546, 1002, 1644)), (4, 11))
         glyph.save(assets / f"clipboard-title-{name}.png")
+
+
+tab_artwork = {
+    "history": (117, 168, 140, 266),
+    "phrases": (297, 168, 320, 446),
+    "recommend": (477, 126, 497, 582),
+}
+for selected, capture in args.clipboard_title_tabs:
+    if selected not in tab_artwork:
+        parser.error(f"unknown clipboard title tab {selected!r}")
+    reference = Image.open(capture).convert("RGB")
+    if reference.size != (1116, 114):
+        raise ValueError("Expected a CHERRY title crop at 1116 x 114")
+    for name, (tab_left, width, glyph_left, glyph_right) in tab_artwork.items():
+        tile = Image.new("RGBA", (width, 105))
+        tile.paste(reference.crop((glyph_left, 40, glyph_right, 84)), (glyph_left - tab_left, 30))
+        state = "active" if selected == name else "idle"
+        tile.save(assets / f"clipboard-tab-{name}-{state}.png")
 
 
 def resource(file):
