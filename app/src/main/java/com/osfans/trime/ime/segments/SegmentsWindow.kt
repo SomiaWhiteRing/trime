@@ -8,7 +8,11 @@ package com.osfans.trime.ime.segments
 import android.app.SearchManager
 import android.content.ClipData
 import android.content.Intent
+import android.view.Gravity
 import android.view.View
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexDirection
@@ -36,6 +40,7 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
     private val scope: ThemeScope by instance()
     private val theme: Theme get() = scope.theme
     private val windowManager: BoardWindowManager by instance()
+    private var clipboardPopup: PopupWindow? = null
 
     override val title: String by lazy {
         context.getString(R.string.word_segment)
@@ -109,7 +114,7 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
                 setOnClickListener {
                     val text = adapter.joinedSegments
                     clipboardManager.setPrimaryClip(ClipData.newPlainText("", text))
-                    windowManager.attachWindow(KeyboardWindow)
+                    clipboardPopup?.dismiss() ?: windowManager.attachWindow(KeyboardWindow)
                 }
             }
         }
@@ -136,7 +141,7 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
 
     private fun onSelectionChanged() {
         val joined = adapter.joinedSegments
-        service.updateComposingText(joined)
+        if (clipboardPopup == null) service.updateComposingText(joined)
 
         if (adapter.isAllSelected) {
             ui.setSelectButtonToDeselect()
@@ -153,6 +158,46 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
     override fun onCreateView(): View {
         viewCreated = true
         return ui.root
+    }
+
+    internal fun openFromClipboard(anchor: View): PopupWindow {
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(0xFF353535.toInt())
+        }
+        val popup = PopupWindow(content, anchor.width, anchor.height, true).apply {
+            inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+            animationStyle = 0
+        }
+        clipboardPopup = popup
+        val header = LinearLayout(context).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(0xFF434343.toInt())
+            addView(TextView(context).apply {
+                text = "‹"
+                textSize = 28f
+                setTextColor(0xFFB3B3B3.toInt())
+                gravity = Gravity.CENTER
+                contentDescription = context.getString(R.string.cherry_translation_close)
+                setOnClickListener { popup.dismiss() }
+            }, LinearLayout.LayoutParams(dp(37), LinearLayout.LayoutParams.MATCH_PARENT))
+            addView(TextView(context).apply {
+                text = title
+                textSize = 14f
+                setTextColor(0xFFB3B3B3.toInt())
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(toolbarButtons)
+        }
+        content.addView(header, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(37)))
+        content.addView(onCreateView(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        adapter.submitList(NativeTokenizer.tokenize(source))
+        ui.recyclerView.addOnItemTouchListener(touchListener)
+        popup.setOnDismissListener {
+            ui.recyclerView.removeOnItemTouchListener(touchListener)
+            clipboardPopup = null
+        }
+        popup.showAsDropDown(anchor, 0, -anchor.height)
+        return popup
     }
 
     override fun refreshColors() {

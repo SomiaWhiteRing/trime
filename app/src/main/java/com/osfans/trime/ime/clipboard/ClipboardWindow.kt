@@ -122,6 +122,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private var clipboardCountJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
     private var translationPopup: PopupWindow? = null
+    private var segmentsPopup: PopupWindow? = null
     private var deleteConfirmation: PopupWindow? = null
     private lateinit var selectionFooter: LinearLayout
     private lateinit var selectionDelete: TextView
@@ -181,7 +182,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
             override fun onSegment(bean: DatabaseBean) {
                 val text = bean.text ?: return
-                windowManager.attachWindow(SegmentsWindow(di, text))
+                showSegments(text)
             }
 
             override fun onCollect(bean: DatabaseBean) {
@@ -223,7 +224,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
             override fun onSegment(bean: DatabaseBean) {
                 val text = bean.text ?: return
-                windowManager.attachWindow(SegmentsWindow(di, text))
+                showSegments(text)
             }
 
             override fun onDelete(id: Int) {
@@ -400,6 +401,16 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         deleteConfirmation?.dismiss()
         deleteConfirmation = showCherryDeleteConfirmation(clipboardLayout) {
             service.lifecycleScope.launch { delete() }
+        }
+    }
+
+    private fun showSegments(text: String) {
+        val segments = SegmentsWindow(di, text)
+        if (usesCherryLayout) {
+            segmentsPopup?.dismiss()
+            segmentsPopup = segments.openFromClipboard(clipboardLayout)
+        } else {
+            windowManager.attachWindow(segments)
         }
     }
 
@@ -714,6 +725,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     override fun onDetached() {
+        segmentsPopup?.dismiss()
+        segmentsPopup = null
         deleteConfirmation?.dismiss()
         deleteConfirmation = null
         translationPopup?.dismiss()
