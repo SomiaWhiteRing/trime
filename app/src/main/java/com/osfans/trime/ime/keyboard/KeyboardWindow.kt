@@ -183,7 +183,9 @@ class KeyboardWindow(di: DI) :
             val currentMode = rime.run { statusCached }.isAsciiMode
             val targetMode = if (it.resetAsciiMode) it.asciiMode else it.lastAsciiMode
 
-            if (currentMode != targetMode) {
+            val followsCherryLanguage = "cherry_ascii" in presetKeyboardIds && target in
+                setOf("default", "qwerty", "cherry_ascii", "cherry_english")
+            if (!followsCherryLanguage && currentMode != targetMode) {
                 service.postRimeJob {
                     commitComposition()
                     setRuntimeOption("ascii_mode", targetMode)
@@ -202,11 +204,15 @@ class KeyboardWindow(di: DI) :
     }
 
     private fun smartMatchKeyboard(): String {
-        if ("cherry_ascii" in presetKeyboardIds && rime.run { statusCached }.isAsciiMode) {
+        val status = rime.run { statusCached }
+        val currentSchema = status.schemaId
+        if (currentSchema == "cherry_english" && currentSchema in presetKeyboardIds) {
+            return currentSchema
+        }
+        if ("cherry_ascii" in presetKeyboardIds && status.isAsciiMode) {
             return "cherry_ascii"
         }
         // 主题的布局中包含方案id，直接采用
-        val currentSchema = rime.run { statusCached }.schemaId
         if (presetKeyboardIds.contains(currentSchema)) {
             return currentSchema
         }
@@ -387,7 +393,8 @@ class KeyboardWindow(di: DI) :
     }
 
     override fun onRimeSchemaUpdated(schema: SchemaItem) {
-        switchKeyboard(".default")
+        val target = if (schema.id == "cherry_english" && schema.id in presetKeyboardIds) schema.id else ".default"
+        switchKeyboard(target)
     }
 
     override fun onRimeOptionUpdated(value: RimeMessage.OptionMessage.Data) {
@@ -411,8 +418,16 @@ class KeyboardWindow(di: DI) :
 
             option == "ascii_mode" -> {
                 if (!value.value) activeKeyboard?.resetShift()
-                if ("cherry_ascii" in presetKeyboardIds && currentKeyboardId in setOf("default", "qwerty", "cherry_ascii")) {
-                    switchKeyboard(if (value.value) "cherry_ascii" else "qwerty")
+                if ("cherry_ascii" in presetKeyboardIds &&
+                    currentKeyboardId in setOf("default", "qwerty", "cherry_ascii", "cherry_english")
+                ) {
+                    val schema = rime.run { statusCached }.schemaId
+                    val target = when {
+                        schema == "cherry_english" && schema in presetKeyboardIds -> schema
+                        value.value -> "cherry_ascii"
+                        else -> "qwerty"
+                    }
+                    switchKeyboard(target)
                 }
             }
         }

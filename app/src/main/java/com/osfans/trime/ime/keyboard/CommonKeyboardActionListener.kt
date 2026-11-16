@@ -57,6 +57,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
     private val liquidWindow: LiquidWindow by instance()
 
     private val prefs = AppPrefs.defaultInstance()
+    private val cherryPreferences = service.getSharedPreferences("cherry_language", android.content.Context.MODE_PRIVATE)
 
     private fun showDialog(dialog: suspend (RimeApi) -> Dialog) {
         rime.launchOnReady { api ->
@@ -196,6 +197,9 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                 when (action.command) {
                     "liquid_keyboard" -> handleLiquidKeyboard(arg)
                     "menu_keyboard" -> windowManager.attachWindow(SwitchOptionWindow(di))
+                    "cherry_language" -> switchCherryLanguage()
+                    "cherry_english_enable" -> switchCherryLanguage(prediction = true)
+                    "cherry_english_disable" -> switchCherryLanguage(prediction = false)
                     "clipboard_window" -> handleClipboardWindow(arg)
                     "set_color_scheme" -> handleColorScheme(arg)
                     "set_theme" -> handleTheme(arg)
@@ -231,6 +235,47 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                     liquidWindow.setDataByIndex(index)
                 } else {
                     windowManager.attachWindow(KeyboardWindow)
+                }
+            }
+
+            private fun switchCherryLanguage(prediction: Boolean? = null) {
+                service.postRimeJob {
+                    val current = statusCached.schemaId
+                    val composingEnglish = current == "cherry_english"
+                    val directEnglish = getRuntimeOption("ascii_mode")
+                    val chinese = cherryPreferences.getString("chinese_schema", "luna_pinyin") ?: "luna_pinyin"
+                    commitComposition()
+                    when (prediction) {
+                        true -> {
+                            if (selectSchema("cherry_english")) {
+                                setRuntimeOption("ascii_mode", false)
+                                cherryPreferences.edit().putBoolean("prediction", true).apply()
+                            }
+                        }
+
+                        false -> {
+                            if (selectSchema(chinese)) {
+                                setRuntimeOption("ascii_mode", true)
+                                cherryPreferences.edit().putBoolean("prediction", false).apply()
+                            }
+                        }
+
+                        null -> when {
+                            composingEnglish -> {
+                                if (selectSchema(chinese)) setRuntimeOption("ascii_mode", false)
+                            }
+
+                            directEnglish -> setRuntimeOption("ascii_mode", false)
+
+                            else -> {
+                                cherryPreferences.edit().putString("chinese_schema", current).apply()
+                                val usePrediction = cherryPreferences.getBoolean("prediction", false)
+                                if (!usePrediction || !selectSchema("cherry_english")) {
+                                    setRuntimeOption("ascii_mode", true)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
