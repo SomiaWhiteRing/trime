@@ -79,6 +79,11 @@ for selected, capture in args.clipboard_title_tabs:
     reference = Image.open(capture).convert("RGB")
     if reference.size != (1116, 114):
         raise ValueError("Expected a CHERRY title crop at 1116 x 114")
+    left, right = {"history": (89, 315), "phrases": (268, 494), "recommend": (447, 632)}[selected]
+    contour = reference.crop((left, 11, right, 111))
+    _, _, glyph_left, glyph_right = tab_artwork[selected]
+    contour.paste((54, 54, 54), (glyph_left - left, 29, glyph_right - left, 73))
+    contour.save(assets / f"clipboard-tab-{selected}-contour.png")
     for name, (tab_left, width, glyph_left, glyph_right) in tab_artwork.items():
         tile = Image.new("RGBA", (width, 105))
         tile.paste(reference.crop((glyph_left, 40, glyph_right, 84)), (glyph_left - tab_left, 30))

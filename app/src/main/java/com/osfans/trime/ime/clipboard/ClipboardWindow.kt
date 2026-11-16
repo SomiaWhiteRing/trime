@@ -762,6 +762,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 val active = scope.drawable("clipboard-tab-$tabName-active.png")
                 if (idle != null && active != null) idle to active else null
             } else null
+            val contour = tabArtwork?.let { scope.drawable("clipboard-tab-$tabName-contour.png") }
             tabUi.activeStyle = { active ->
                 tabUi.root.foreground = tabArtwork?.let { if (active) it.second else it.first }
                 val bold = active && !isVivo
@@ -787,7 +788,12 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         2 -> context.dp(-0.5f)
                         else -> 0f
                     }
-                    CherryClipboardTabBackground(context, contourOffset)
+                    val (left, right) = when (position) {
+                        0 -> 28 to 30
+                        1 -> 29 to 29
+                        else -> 30 to 29
+                    }
+                    CherryClipboardTabBackground(context, contourOffset, contour, left, right)
                 } else {
                     null
                 }

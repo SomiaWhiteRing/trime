@@ -117,9 +117,12 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
             clipChildren = false
             setBackgroundColor(0xFF363636.toInt())
             val stroke = dp(1f / 3).roundToInt().coerceAtLeast(1)
-            val divider = dp(37) - stroke
-            add(View(ctx).apply { setBackgroundColor(0xFF434343.toInt()) }, lParams(matchParent, divider) {
+            val divider = dp(37) - 2 * stroke
+            add(View(ctx).apply { setBackgroundColor(0xFF3C3C3C.toInt()) }, lParams(matchParent, stroke) {
                 topOfParent()
+            })
+            add(View(ctx).apply { setBackgroundColor(0xFF434343.toInt()) }, lParams(matchParent, divider - stroke) {
+                topOfParent(stroke)
             })
             add(View(ctx).apply { setBackgroundColor(0xFF4E4E4E.toInt()) }, lParams(matchParent, stroke) {
                 topOfParent(divider)
@@ -158,7 +161,13 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
 }
 
 
-internal class CherryClipboardTabBackground(context: Context, private val horizontalOffset: Float) : Drawable() {
+internal class CherryClipboardTabBackground(
+    private val context: Context,
+    private val horizontalOffset: Float,
+    private val referenceContour: Drawable? = null,
+    private val referenceLeftOverhang: Int = 0,
+    private val referenceRightOverhang: Int = 0,
+) : Drawable() {
     private val curveWidth = context.dp(16.5f)
     private val edgeInset = context.dp(0.5f)
     private val strokeWidth = context.dp(0.6f).roundToInt().coerceAtLeast(1).toFloat()
@@ -172,6 +181,15 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
     private var opacity = 255
 
     override fun onBoundsChange(bounds: Rect) {
+        referenceContour?.let {
+            it.setBounds(
+                bounds.left - context.dp(referenceLeftOverhang / 3f).roundToInt(),
+                bounds.top + context.dp(1f / 3f).roundToInt(),
+                bounds.right + context.dp(referenceRightOverhang / 3f).roundToInt(),
+                bounds.top + context.dp(101f / 3f).roundToInt(),
+            )
+            return
+        }
         val left = bounds.left - overhang - leftExtension + horizontalOffset
         val right = bounds.right + overhang + rightExtension + horizontalOffset
         val top = bounds.top + edgeInset + topInset
@@ -185,6 +203,10 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
     }
 
     override fun draw(canvas: Canvas) {
+        referenceContour?.let {
+            it.draw(canvas)
+            return
+        }
         paint.style = Paint.Style.FILL
         paint.color = 0xFF363636.toInt()
         paint.alpha = opacity
@@ -209,11 +231,13 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
 
     override fun setAlpha(alpha: Int) {
         opacity = alpha
+        referenceContour?.alpha = alpha
         invalidateSelf()
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
         paint.colorFilter = colorFilter
+        referenceContour?.colorFilter = colorFilter
         invalidateSelf()
     }
 
