@@ -36,4 +36,7 @@
     <string name="cherry_send_automatic_label">自动发送</string>
     <string name="cherry_send_automatic_detail">点击内容，直接发送（支持微信、QQ等聊天应用）</string>
     <string name="cherry_send_close">关闭</string>
+    <string name="cherry_send_random">随机</string>
+    <string name="cherry_send_random_label">随机发送</string>
+    <string name="cherry_send_random_detail">随机上屏并发送内容</string>
 </resources>

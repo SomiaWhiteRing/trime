@@ -131,7 +131,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private val clipboardReturnAfterPaste by prefs.clipboardReturnAfterPaste
     private val lockUpdates = mutableListOf<() -> Unit>()
     private val recommendationPreferences = service.getSharedPreferences("cherry_recommendations", Context.MODE_PRIVATE)
-    private var automaticRecommendationSend = recommendationPreferences.getBoolean("automatic_send", false)
+    private var recommendationSendMode = CherrySendMode.entries.firstOrNull {
+        it.name == recommendationPreferences.getString("send_mode", null)
+    } ?: if (recommendationPreferences.getBoolean("automatic_send", false)) CherrySendMode.AUTOMATIC else CherrySendMode.MANUAL
 
     private val clipboardBeansPager by lazy {
         Pager(PagingConfig(pageSize = 16)) { ClipboardHelper.allBeans() }
@@ -367,7 +369,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         setOnClickListener { clipboardLayout.showSettings(createClipboardSettings()) }
     }
 
-    private fun createRecommendationFooter() = FrameLayout(context).apply {
+    private fun createRecommendationFooter(onModeChanged: (CherrySendMode) -> Unit) = FrameLayout(context).apply {
         setBackgroundColor(0xFF424242.toInt())
         addView(View(context).apply {
             setBackgroundColor(0xFF4D4D4D.toInt())
@@ -385,13 +387,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             setTextColor(0xFFB3B3B3.toInt())
         }
         val updateMode = {
-            val label = if (automaticRecommendationSend) R.string.cherry_send_automatic else R.string.cherry_send_manual
-            val name = if (automaticRecommendationSend) "automatic" else "manual"
-            val artwork = if (context.getString(label) in setOf("手动", "自动")) {
-                scope.drawable("clipboard-recommend-send-$name.png")
-            } else null
+            val name = recommendationSendMode.name.lowercase()
+            val label = context.getString(recommendationSendMode.footer)
+            val artwork = when (label) {
+                "手动", "自动", "随机" -> scope.drawable("clipboard-recommend-send-$name.png")
+                else -> null
+            }
             sendingMode.foreground = artwork
-            sendingMode.text = context.getString(label) + " ▾"
+            sendingMode.text = "$label ▾"
             sendingMode.setTextColor(if (artwork == null) 0xFFB3B3B3.toInt() else Color.TRANSPARENT)
         }
         updateMode()
@@ -399,11 +402,12 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             clipboardLayout.showPanelOverlay(createCherrySendModePanel(
                 context,
                 scope,
-                automaticRecommendationSend,
+                recommendationSendMode,
                 clipboardLayout::dismissPanelOverlay,
-            ) { automatic ->
-                automaticRecommendationSend = automatic
-                recommendationPreferences.edit().putBoolean("automatic_send", automatic).apply()
+            ) { mode ->
+                recommendationSendMode = mode
+                recommendationPreferences.edit().putString("send_mode", mode.name).apply()
+                onModeChanged(mode)
                 updateMode()
                 clipboardLayout.dismissPanelOverlay()
             })
@@ -709,13 +713,19 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             if (recommendations.isNotEmpty()) {
                 val content = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    addView(CherryClipboardRecommendationView(context, scope, recommendations) { phrase ->
+                    val recommendationsView = CherryClipboardRecommendationView(context, scope, recommendations, recommendationSendMode) { phrase ->
                         if (service.commitText(phrase)) {
-                            if (automaticRecommendationSend && !clipboardReturnAfterPaste) service.sendRecommendationInCurrentEditor()
+                            if (recommendationSendMode != CherrySendMode.MANUAL && !clipboardReturnAfterPaste) {
+                                service.sendRecommendationInCurrentEditor()
+                            }
                             if (clipboardReturnAfterPaste) windowManager.attachWindow(KeyboardWindow)
                         }
-                    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
-                    addView(createRecommendationFooter(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(29)))
+                    }
+                    addView(recommendationsView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+                    addView(
+                        createRecommendationFooter(recommendationsView::updateMode),
+                        LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(29)),
+                    )
                 }
                 root.addView(content, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 return@apply

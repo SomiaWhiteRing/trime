@@ -33,6 +33,8 @@ parser.add_argument("--clipboard-recommendation-send-controls", nargs=2, metavar
                     help="1116 x 87 recommendation footer crops from y=2369 in manual and automatic mode")
 parser.add_argument("--clipboard-send-mode-panel", nargs=2, metavar=("MANUAL", "AUTOMATIC"),
                     help="1116 x 826 local send-mode panel captures from y=1630")
+parser.add_argument("--clipboard-send-random", nargs=2, metavar=("SCROLLED_PANEL", "FOOTER"),
+                    help="Native selected random row in the scrolled mode panel, and its 1116 x 87 footer")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -173,6 +175,16 @@ if args.clipboard_send_mode_panel:
         for name, top in (("manual", 116), ("automatic", 327)):
             state = "active" if selected == name else "idle"
             reference.crop((0, top, 1116, top + 211)).save(assets / f"clipboard-send-mode-{name}-{state}.png")
+        if selected == "manual":
+            reference.crop((0, 538, 1116, 749)).save(assets / "clipboard-send-mode-random-idle.png")
+
+if args.clipboard_send_random:
+    panel, footer = [Image.open(path).convert("RGB") for path in args.clipboard_send_random]
+    if panel.size != (1116, 826) or footer.size != (1116, 87):
+        raise ValueError("Expected 1116 x 826 mode panel and 1116 x 87 footer captures")
+    panel.crop((0, 380, 1116, 591)).save(assets / "clipboard-send-mode-random-active.png")
+    footer.crop((615, 0, 783, 87)).save(assets / "clipboard-recommend-send-random.png")
+
 
 
 def resource(file):

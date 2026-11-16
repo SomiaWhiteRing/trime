@@ -37,4 +37,7 @@
     <string name="cherry_send_automatic_label">Send automatically</string>
     <string name="cherry_send_automatic_detail">Tap the content to send it in supported chat apps</string>
     <string name="cherry_send_close">Close</string>
+    <string name="cherry_send_random">Random</string>
+    <string name="cherry_send_random_label">Send randomly</string>
+    <string name="cherry_send_random_detail">Insert and send a random phrase</string>
 </resources>

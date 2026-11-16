@@ -27,9 +27,11 @@ internal class CherryClipboardRecommendationView(
     context: Context,
     private val scope: ThemeScope,
     private val categories: List<Category>,
+    initialMode: CherrySendMode,
     private val paste: (String) -> Unit,
 ) : LinearLayout(context) {
-    data class Category(val title: String, val phrases: List<String>)
+    data class Group(val title: String, val phrases: List<String>)
+    data class Category(val title: String, val phrases: List<String>, val groups: List<Group>)
 
     private val foregroundColor = 0xFFB3B3B3.toInt()
     private val accentColor = 0xFFA21E42.toInt()
@@ -46,6 +48,7 @@ internal class CherryClipboardRecommendationView(
         isVerticalScrollBarEnabled = false
         addView(cards, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
     }
+    private var mode = initialMode
     private var selected = 0
     private var expanded = -1
 
@@ -56,6 +59,14 @@ internal class CherryClipboardRecommendationView(
         addView(cardsScroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         renderTabs()
         renderCards()
+    }
+
+    fun updateMode(next: CherrySendMode) {
+        if (mode == next) return
+        mode = next
+        expanded = -1
+        renderCards()
+        cardsScroll.scrollTo(0, 0)
     }
 
     private fun renderTabs() {
@@ -103,7 +114,12 @@ internal class CherryClipboardRecommendationView(
 
     private fun renderCards() {
         cards.removeAllViews()
-        categories[selected].phrases.forEachIndexed { index, phrase ->
+        val category = categories[selected]
+        if (mode == CherrySendMode.RANDOM) {
+            renderRandomGroups(category.groups)
+            return
+        }
+        category.phrases.forEachIndexed { index, phrase ->
             val open = expanded == index
             val card = LinearLayout(context).apply {
                 orientation = VERTICAL
@@ -166,7 +182,48 @@ internal class CherryClipboardRecommendationView(
         }
     }
 
+    private fun renderRandomGroups(groups: List<Group>) {
+        for (pair in groups.chunked(2)) {
+            val row = LinearLayout(context).apply { orientation = HORIZONTAL }
+            for ((index, group) in pair.withIndex()) {
+                val card = LinearLayout(context).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(15), 0, dp(14), 0)
+                    background = GradientDrawable().apply {
+                        setColor(0xFF434343.toInt())
+                        cornerRadius = dp(4f)
+                        setStroke(dp(1f / 3).roundToInt().coerceAtLeast(1), 0xFF5A5A5A.toInt())
+                    }
+                    addView(TextView(context).apply {
+                        text = group.title
+                        textSize = 14f
+                        setTextColor(foregroundColor)
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                    }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+                    addView(TextView(context).apply {
+                        text = group.phrases.size.toString()
+                        textSize = 15f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(0xFFA0A0A0.toInt())
+                    })
+                    setOnClickListener { paste(group.phrases.random()) }
+                }
+                row.addView(card, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply {
+                    if (index == 0) marginEnd = dp(6)
+                })
+            }
+            if (pair.size == 1) row.addView(View(context), LayoutParams(0, 1, 1f))
+            cards.addView(row, LayoutParams(LayoutParams.MATCH_PARENT, dp(43f + 1f / 3).roundToInt()).apply {
+                bottomMargin = dp(4)
+            })
+        }
+    }
+
     companion object {
+        private fun readPhrases(entries: JSONArray) =
+            (0 until entries.length()).map(entries::getString).filter(String::isNotBlank)
+
         fun loadProfile(): List<Category> {
             val path = DataManager.userDataDir.resolve("clipboard_recommendations.json")
             if (!path.isFile) return emptyList()
@@ -175,9 +232,18 @@ internal class CherryClipboardRecommendationView(
                 (0 until data.length()).mapNotNull { index ->
                     val group = data.getJSONObject(index)
                     val name = group.getString("title")
-                    val entries = group.getJSONArray("phrases")
-                    val phrases = (0 until entries.length()).map(entries::getString).filter(String::isNotBlank)
-                    if (name.isNotBlank() && phrases.isNotEmpty()) Category(name, phrases) else null
+                    val groups = group.optJSONArray("groups")?.let { entries ->
+                        (0 until entries.length()).mapNotNull { i ->
+                            val entry = entries.getJSONObject(i)
+                            val title = entry.getString("title")
+                            val phrases = readPhrases(entry.getJSONArray("phrases"))
+                            if (title.isNotBlank() && phrases.isNotEmpty()) Group(title, phrases) else null
+                        }
+                    }.orEmpty()
+                    val phrases = group.optJSONArray("phrases")?.let(::readPhrases) ?: groups.flatMap { it.phrases }
+                    if (name.isNotBlank() && phrases.isNotEmpty()) {
+                        Category(name, phrases, groups.ifEmpty { listOf(Group(name, phrases)) })
+                    } else null
                 }
             }.getOrDefault(emptyList())
         }
