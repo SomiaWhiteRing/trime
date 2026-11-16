@@ -71,7 +71,7 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     private val menuDivider = View(ctx).apply {
         background = GradientDrawable(
             GradientDrawable.Orientation.LEFT_RIGHT,
-            intArrayOf(0x00000000, 0x13000000, 0x25000000),
+            intArrayOf(0x00000000, 0x12000000, 0x19000000, 0x20000000, 0x26000000),
         )
     }
     private val settingsTitle = TextView(ctx).apply {
