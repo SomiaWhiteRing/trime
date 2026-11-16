@@ -19,6 +19,8 @@ parser.add_argument("--reference-apk", type=Path, help="Local Baidu APK for clip
 parser.add_argument("--symbol-return-pressed", type=Path, help="1116 x 146 symbol footer crop from y=2290 with Return held")
 parser.add_argument("--symbol-footer-pressed", nargs=2, action="append", default=[], metavar=("KEY", "CAPTURE"),
                     help="1116 x 146 footer crop with a symbol key held. Repeat for each key.")
+parser.add_argument("--symbol-page-boundary", nargs=3, action="append", default=[], metavar=("KEY", "IDLE", "HELD"),
+                    help="Idle and held 1116 x 146 footer crops for a disabled previous or next key")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -233,6 +235,15 @@ for key, capture in args.symbol_footer_pressed:
         raise ValueError("Expected the held CHERRY symbol footer at 1116 x 146")
     left, right = footer_bounds[key]
     pressed_footer.crop((left, 16, right, 137)).save(assets / f"cherry-symbol-{key}-pressed.png")
+for key, idle, held in args.symbol_page_boundary:
+    if key not in ("previous", "next"):
+        parser.error(f"unknown paging key {key!r}")
+    left, right = footer_bounds[key]
+    for name, capture in ((f"{key}-disabled", idle), (f"{key}-disabled-pressed", held)):
+        footer = Image.open(capture).convert("RGB")
+        if footer.size != (1116, 146):
+            raise ValueError("Expected a CHERRY symbol footer at 1116 x 146")
+        footer.crop((left, 16, right, 137)).save(assets / f"cherry-symbol-{name}.png")
 
 theme_path=theme_dir/'baidu_cherry.trime.yaml'
 theme=yaml.safe_load(theme_path.read_text(encoding='utf-8'))

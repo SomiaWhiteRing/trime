@@ -12,6 +12,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
@@ -165,13 +166,13 @@ internal class CherrySymbolsWindow(
             preferences.edit().putBoolean("locked", locked).apply()
             render()
         }
-        previous = hitTarget(context, "上一页") {
+        previous = pagingKey("上一页") {
             if (page > 0) {
                 page--
                 render()
             }
         }
-        next = hitTarget(context, "下一页") {
+        next = pagingKey("下一页") {
             page++
             render()
         }
@@ -249,8 +250,28 @@ internal class CherrySymbolsWindow(
         next.isEnabled = (page + 1) * 4 < rows.size
         previous.background = if (previous.isEnabled) {
             footerBackground("previous", scope.drawable("cherry-symbol-previous-enabled.png"))
-        } else null
-        next.background = if (next.isEnabled) footerBackground("next") else scope.drawable("cherry-symbol-next-disabled.png")
+        } else {
+            footerBackground("previous-disabled", scope.drawable("cherry-symbol-previous-disabled.png"))
+        }
+        next.background = if (next.isEnabled) footerBackground("next") else
+            footerBackground("next-disabled", scope.drawable("cherry-symbol-next-disabled.png"))
+    }
+
+    private fun pagingKey(description: String, click: () -> Unit): View = object : View(context) {
+        @SuppressLint("ClickableViewAccessibility")
+        override fun onTouchEvent(event: MotionEvent): Boolean {
+            if (isEnabled) return super.onTouchEvent(event)
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> isPressed = true
+                MotionEvent.ACTION_MOVE -> isPressed = event.x >= 0 && event.x < width &&
+                    event.y >= 0 && event.y < height
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> isPressed = false
+            }
+            return true
+        }
+    }.apply {
+        contentDescription = description
+        setOnClickListener { if (isEnabled) click() }
     }
 
     private fun footerBackground(key: String, idle: Drawable? = null): Drawable? {
