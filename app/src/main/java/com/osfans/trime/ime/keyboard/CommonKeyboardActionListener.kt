@@ -170,9 +170,11 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                             clearComposition()
                         }
                         withContext(Dispatchers.Main.immediate) {
-                            windowManager.attachWindow(CherrySymbolsWindow(di, catalog) {
-                                windowManager.attachWindow(KeyboardWindow)
-                            })
+                            windowManager.attachWindow(
+                                CherrySymbolsWindow(di, catalog, english = keyboardWindow.isCherryEnglishKeyboard) {
+                                    windowManager.attachWindow(KeyboardWindow)
+                                },
+                            )
                         }
                     }
                 }

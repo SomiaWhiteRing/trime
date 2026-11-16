@@ -138,6 +138,7 @@ internal class CherryNumberWindow(
 internal class CherrySymbolsWindow(
     di: DI,
     private val catalog: CherrySymbolCatalog,
+    english: Boolean = false,
     private val onReturn: () -> Unit,
 ) : BoardWindow.NoBarBoardWindow(di) {
     private val service: TrimeInputMethodService by instance()
@@ -152,7 +153,7 @@ internal class CherrySymbolsWindow(
     private lateinit var previous: View
     private lateinit var next: View
     private lateinit var lock: View
-    private var category = 0
+    private var category = if (english) catalog.groups.indexOfFirst { it.label == "英文" }.coerceAtLeast(0) else 0
     private var locked = preferences.getBoolean("locked", true)
     private var previousInputBarVisibility = View.VISIBLE
     private var previousWindowHeight = 0
