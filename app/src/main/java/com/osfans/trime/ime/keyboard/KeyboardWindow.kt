@@ -73,6 +73,8 @@ class KeyboardWindow(di: DI) :
 
     companion object : ResidentWindow.Key {
         lateinit var currentKeyboard: Keyboard
+        private val cherryEnglishKeyboards = setOf("cherry_ascii", "cherry_english")
+        private val cherryAlphabetKeyboards = cherryEnglishKeyboards + setOf("default", "qwerty")
     }
 
     override val key: ResidentWindow.Key
@@ -183,8 +185,7 @@ class KeyboardWindow(di: DI) :
             val currentMode = rime.run { statusCached }.isAsciiMode
             val targetMode = if (it.resetAsciiMode) it.asciiMode else it.lastAsciiMode
 
-            val followsCherryLanguage = "cherry_ascii" in presetKeyboardIds && target in
-                setOf("default", "qwerty", "cherry_ascii", "cherry_english")
+            val followsCherryLanguage = "cherry_ascii" in presetKeyboardIds && target in cherryAlphabetKeyboards
             if (!followsCherryLanguage && currentMode != targetMode) {
                 service.postRimeJob {
                     commitComposition()
@@ -278,8 +279,13 @@ class KeyboardWindow(di: DI) :
             if (cachedKeyboards.containsKey(target)) {
                 if (target == currentKeyboardId) return@execute
             }
+            val switchesCherryLanguage = "cherry_ascii" in presetKeyboardIds &&
+                target in cherryAlphabetKeyboards && currentKeyboardId in cherryAlphabetKeyboards &&
+                (target in cherryEnglishKeyboards) != (currentKeyboardId in cherryEnglishKeyboards)
             detachCurrentView()
+            if (switchesCherryLanguage) cachedKeyboards[target]?.first?.resetShift()
             attachKeyboard(target)
+            if (switchesCherryLanguage) currentKeyboardView?.invalidateAllKeys()
         }
         Timber.d("Switched to keyboard: $target")
     }
@@ -419,7 +425,7 @@ class KeyboardWindow(di: DI) :
             option == "ascii_mode" -> {
                 if (!value.value) activeKeyboard?.resetShift()
                 if ("cherry_ascii" in presetKeyboardIds &&
-                    currentKeyboardId in setOf("default", "qwerty", "cherry_ascii", "cherry_english")
+                    currentKeyboardId in cherryAlphabetKeyboards
                 ) {
                     val schema = rime.run { statusCached }.schemaId
                     val target = when {
