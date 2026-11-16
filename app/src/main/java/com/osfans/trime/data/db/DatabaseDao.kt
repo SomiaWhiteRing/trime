@@ -99,6 +99,9 @@ interface DatabaseDao {
     @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} WHERE text=:text LIMIT 1")
     suspend fun find(text: String): DatabaseBean?
 
+    @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} WHERE text=:text AND phrase_group IS NULL LIMIT 1")
+    suspend fun findDefaultPhrase(text: String): DatabaseBean?
+
     @Query("SELECT COUNT(*) FROM ${DatabaseBean.TABLE_NAME}")
     suspend fun itemCount(): Int
 

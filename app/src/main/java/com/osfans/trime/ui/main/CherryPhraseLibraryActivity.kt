@@ -47,6 +47,10 @@ class CherryPhraseLibraryActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        intent.getStringExtra(CherryPhraseEditorActivity.GROUP)?.let { group ->
+            val index = groups.indexOf(group)
+            if (index >= 0) selected = index + 2
+        }
         window.statusBarColor = 0xFFDEEDFF.toInt()
         window.navigationBarColor = Color.WHITE
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
@@ -95,6 +99,20 @@ class CherryPhraseLibraryActivity : Activity() {
         root.addView(controls, LinearLayout.LayoutParams(-1, dp(84)))
         rows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(18), 0, 0, 0) }
         root.addView(ScrollView(this).apply { addView(rows) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(TextView(this).apply {
+            setText(R.string.cherry_library_add_phrase)
+            gravity = Gravity.CENTER
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(0xFF4C6FFF.toInt(), 0xFF66B2FF.toInt())).apply { cornerRadius = dp(24f) }
+            setOnClickListener { CherryPhraseEditorActivity.open(this@CherryPhraseLibraryActivity, groups.getOrNull(selected - 2)) }
+        }, LinearLayout.LayoutParams(-1, dp(49)).apply {
+            marginStart = dp(16)
+            marginEnd = dp(16)
+            topMargin = dp(8)
+            bottomMargin = dp(12)
+        })
         setContentView(root)
         refreshTabs()
         scope.launch {
@@ -139,8 +157,8 @@ class CherryPhraseLibraryActivity : Activity() {
         rows.removeAllViews()
         val visible = when (selected) {
             0 -> phrases.filter { it.pinned }
-            1 -> phrases.filterNot { it.recentOnly }
-            else -> emptyList()
+            1 -> phrases.filter { !it.recentOnly && it.phraseGroup == null }
+            else -> phrases.filter { !it.recentOnly && it.phraseGroup == groups[selected - 2] }
         }
         for (phrase in visible) {
             rows.addView(TextView(this).apply {

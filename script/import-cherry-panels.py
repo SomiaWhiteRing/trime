@@ -53,11 +53,25 @@ parser.add_argument("--clipboard-phrase-random", type=Path,
                     help="1116 x 826 CHERRY common-phrase random grid from y=1630")
 parser.add_argument("--clipboard-phrase-library", nargs=2, metavar=("LIBRARY", "FILTERS"), type=Path,
                     help="CHERRY standalone common-phrase screenshot and keyboard filter capture")
+parser.add_argument("--clipboard-phrase-empty", type=Path,
+                    help="1116 x 2480 CHERRY empty custom group screenshot")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.clipboard_phrase_empty:
+    reference = Image.open(args.clipboard_phrase_empty).convert("RGB")
+    if reference.size != (1116, 2480):
+        raise ValueError("Expected the CHERRY empty group portrait capture")
+    for name, bounds in (
+        ("add", (24, 1871, 546, 1964)),
+        ("manage", (570, 1871, 1092, 1964)),
+        ("body", (0, 1964, 1116, 2369)),
+    ):
+        reference.crop(bounds).save(assets / f"clipboard-phrase-empty-{name}.png")
+
 
 if args.clipboard_phrase_library:
     library, filters = (Image.open(path).convert("RGB") for path in args.clipboard_phrase_library)

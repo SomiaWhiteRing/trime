@@ -107,7 +107,7 @@ object ClipboardHelper :
         clbDb =
             Room
                 .databaseBuilder(context, Database::class.java, "clipboard.db")
-                .addMigrations(Database.MIGRATION_3_4, Database.MIGRATION_4_5)
+                .addMigrations(Database.MIGRATION_3_4, Database.MIGRATION_4_5, Database.MIGRATION_5_6)
                 .build()
         clbDao = clbDb.databaseDao()
         enabledListener.onChange(enabledPref.key, enabledPref.getValue())

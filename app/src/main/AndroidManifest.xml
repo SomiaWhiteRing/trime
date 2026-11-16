@@ -104,6 +104,12 @@ SPDX-License-Identifier: GPL-3.0-or-later
             android:parentActivityName=".ui.main.MainActivity" />
 
         <activity
+            android:name=".ui.main.CherryPhraseEditorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DialogTheme"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize" />
+
+        <activity
             android:name=".ui.main.CherryPhraseLibraryActivity"
             android:exported="false" />
 

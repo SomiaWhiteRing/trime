@@ -62,6 +62,7 @@ import com.osfans.trime.ime.segments.SegmentsWindow
 import com.osfans.trime.ime.translation.showClipboardTranslation
 import com.osfans.trime.ime.window.BoardWindow
 import com.osfans.trime.ime.window.BoardWindowManager
+import com.osfans.trime.ui.main.CherryPhraseEditorActivity
 import com.osfans.trime.ui.main.CherryPhraseLibraryActivity
 import com.osfans.trime.ui.main.ClipEditActivity
 import com.osfans.trime.util.AppUtils
@@ -124,6 +125,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private var phraseSequenceIndex = 0
     private var undoStagedPhrase: (() -> Boolean)? = null
     private lateinit var phraseSendButton: View
+    private lateinit var emptyPhraseGroup: View
     private lateinit var phraseUndoButton: View
     private val recentPhrasePrefs by lazy { service.getSharedPreferences("cherry_phrase_recents", Context.MODE_PRIVATE) }
     private val recentPhraseIds by lazy {
@@ -843,7 +845,18 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
+    private fun openPhraseLibrary(group: String?) {
+        context.startActivity(Intent(context, CherryPhraseLibraryActivity::class.java)
+            .putExtra(CherryPhraseEditorActivity.GROUP, group)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
     private fun updatePhraseSequence() {
+        if (::emptyPhraseGroup.isInitialized) {
+            emptyPhraseGroup.visibility = if (recommendationSendMode != CherrySendMode.RANDOM &&
+                phraseFilter.value.artwork == null && displayedPhrases.isEmpty()
+            ) View.VISIBLE else View.GONE
+        }
         val visible = recommendationSendMode == CherrySendMode.SEQUENTIAL && phraseSequenceIndex in displayedPhrases.indices
         collectionBeansAdapter.sequencePosition = if (visible) phraseSequenceIndex else -1
         if (!::phraseSendButton.isInitialized) return
@@ -926,9 +939,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     contentDescription = context.getText(R.string.cherry_clipboard_phrases)
                     setImageDrawable(scope.drawable("clipboard-phrase-library-entry.png"))
                     if (drawable == null) setImageResource(android.R.drawable.ic_menu_preferences)
-                    setOnClickListener {
-                        context.startActivity(Intent(context, CherryPhraseLibraryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }
+                    setOnClickListener { openPhraseLibrary(phraseFilter.value.takeIf { it.artwork == null }?.text) }
                 }, LinearLayout.LayoutParams(context.dp(39), LinearLayout.LayoutParams.MATCH_PARENT))
                 select(phraseFilter.value)
                 val filterStrip = HorizontalScrollView(context).apply {
@@ -951,6 +962,38 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         addView(FrameLayout(context).apply {
                             addView(recyclerView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                             addView(randomGrid, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                            emptyPhraseGroup = LinearLayout(context).apply {
+                                orientation = LinearLayout.VERTICAL
+                                val actions = LinearLayout(context).apply {
+                                    setPadding(context.dp(8), context.dp(5), context.dp(8), 0)
+                                    for (label in listOf(R.string.cherry_library_add_phrase, R.string.cherry_library_manage_phrases)) {
+                                        val asset = if (label == R.string.cherry_library_add_phrase) "add" else "manage"
+                                        addView(TextView(context).apply {
+                                            setText(label)
+                                            gravity = Gravity.CENTER
+                                            val artwork = scope.drawable("clipboard-phrase-empty-$asset.png")
+                                            background = artwork ?: GradientDrawable().apply {
+                                                cornerRadius = context.dp(4f)
+                                                setStroke(context.dp(1), 0xFF777777.toInt())
+                                            }
+                                            setTextColor(if (artwork == null) 0xFFB3B3B3.toInt() else Color.TRANSPARENT)
+                                            setOnClickListener {
+                                                val group = phraseFilter.value.text
+                                                if (label == R.string.cherry_library_add_phrase) CherryPhraseEditorActivity.open(context, group)
+                                                else openPhraseLibrary(group)
+                                            }
+                                        }, LinearLayout.LayoutParams(0, context.dp(31), 1f).apply {
+                                            if (asset == "add") marginEnd = context.dp(8)
+                                        })
+                                    }
+                                }
+                                addView(actions, LinearLayout.LayoutParams(-1, context.dp(36)))
+                                addView(ImageView(context).apply {
+                                    scaleType = ImageView.ScaleType.FIT_XY
+                                    setImageDrawable(scope.drawable("clipboard-phrase-empty-body.png"))
+                                }, LinearLayout.LayoutParams(-1, 0, 1f))
+                            }
+                            addView(emptyPhraseGroup, FrameLayout.LayoutParams(-1, -1))
                             phraseSendButton = TextView(context).apply {
                                 contentDescription = context.getText(R.string.cherry_phrase_send)
                                 gravity = Gravity.CENTER
@@ -1227,11 +1270,15 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 combine(phraseFilter, recentPhraseIds, CollectionHelper.observeRecords()) { filter, ids, records ->
                     val currentId = displayedPhrases.getOrNull(phraseSequenceIndex)?.id
                     val byId = records.associateBy { it.id }
-                    phraseGroups = mapOf(
-                        PhraseFilter.DEFAULT to records.filterNot { it.recentOnly },
-                        PhraseFilter.FAVORITES to records.filter { it.pinned },
-                        PhraseFilter.RECENT to ids.mapNotNull(byId::get),
-                    )
+                    val grouped = records.filterNot { it.recentOnly }.groupBy { it.phraseGroup }
+                    phraseGroups = phraseFilters.associateWith { item ->
+                        when (item) {
+                            PhraseFilter.DEFAULT -> grouped[null].orEmpty()
+                            PhraseFilter.FAVORITES -> records.filter { it.pinned }
+                            PhraseFilter.RECENT -> ids.mapNotNull(byId::get)
+                            else -> grouped[item.text].orEmpty()
+                        }
+                    }
                     displayedPhrases = phraseGroups[filter].orEmpty()
                     updateRandomPhraseCounts()
                     phraseSequenceIndex = displayedPhrases.indexOfFirst { it.id == currentId }.coerceAtLeast(0)

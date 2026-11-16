@@ -23,6 +23,8 @@ data class DatabaseBean(
     val pinned: Boolean = false,
     @ColumnInfo(name = "recent_only", defaultValue = "0")
     val recentOnly: Boolean = false,
+    @ColumnInfo(name = "phrase_group")
+    val phraseGroup: String? = null,
 ) {
     companion object {
         const val TABLE_NAME = "t_data"

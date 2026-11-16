@@ -28,7 +28,7 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
         cltDb =
             Room
                 .databaseBuilder(context, Database::class.java, "collection.db")
-                .addMigrations(Database.MIGRATION_3_4, Database.MIGRATION_4_5)
+                .addMigrations(Database.MIGRATION_3_4, Database.MIGRATION_4_5, Database.MIGRATION_5_6)
                 .build()
         cltDao = cltDb.databaseDao()
     }
@@ -76,7 +76,7 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
                 val bean = DatabaseBean(text = text)
                 if (bean.text.isNullOrBlank()) return@withLock
                 try {
-                    cltDao.find(text)?.let {
+                    cltDao.findDefaultPhrase(text)?.let {
                         val saved = it.copy(time = bean.time, recentOnly = false)
                         lastBean = saved
                         cltDao.update(saved)
