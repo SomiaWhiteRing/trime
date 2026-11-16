@@ -142,20 +142,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             }
 
             override fun onSearch(bean: DatabaseBean) {
-                val text = bean.text ?: return
-                val url = Uri.parse("https://m.baidu.com/s").buildUpon().appendQueryParameter("word", text).build()
-                val intent = Intent(Intent.ACTION_VIEW, url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                try {
-                    service.startActivity(intent)
-                } catch (_: ActivityNotFoundException) {
-                    // Search requires a browser.
-                }
+                bean.text?.let(::searchClipboard)
             }
 
             override fun onTranslate(bean: DatabaseBean) {
-                val text = bean.text?.takeUnless { it.isBlank() } ?: return
-                translationPopup?.dismiss()
-                translationPopup = showClipboardTranslation(clipboardLayout, text, service::insertTranslation)
+                bean.text?.let(::translateClipboard)
             }
 
             override fun onMultiSelect(id: Int) {
@@ -408,9 +399,25 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         val segments = SegmentsWindow(di, text)
         if (usesCherryLayout) {
             segmentsPopup?.dismiss()
-            segmentsPopup = segments.openFromClipboard(clipboardLayout)
+            segmentsPopup = segments.openFromClipboard(clipboardLayout, ::translateClipboard, ::searchClipboard)
         } else {
             windowManager.attachWindow(segments)
+        }
+    }
+
+    private fun translateClipboard(text: String) {
+        if (text.isBlank()) return
+        translationPopup?.dismiss()
+        translationPopup = showClipboardTranslation(clipboardLayout, text, service::insertTranslation)
+    }
+
+    private fun searchClipboard(text: String) {
+        val url = Uri.parse("https://m.baidu.com/s").buildUpon().appendQueryParameter("word", text).build()
+        val intent = Intent(Intent.ACTION_VIEW, url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            service.startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            // Search requires a browser.
         }
     }
 

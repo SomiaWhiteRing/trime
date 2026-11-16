@@ -32,6 +32,8 @@ if args.reference_apk:
             ("pin", "1VT.png"), ("unpin", "3Jg.png"), ("delete", "GyI.png"), ("multi-select", "6CO.png"),
         ):
             (assets / f"clipboard-action-{action}.png").write_bytes(apk.read(f"res/{resource_file}"))
+        for action, resource_file in (("copy", "3BS.png"), ("translate", "GDX.png"), ("search", "96z.png")):
+            (assets / f"clipboard-segments-{action}.png").write_bytes(apk.read(f"res/{resource_file}"))
         for state, resource_file in (("off", "73x.png"), ("on", "HNF.png")):
             (assets / f"clipboard-switch-{state}.png").write_bytes(apk.read(f"res/{resource_file}"))
 

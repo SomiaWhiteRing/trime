@@ -10,6 +10,8 @@ import android.content.ClipData
 import android.content.Intent
 import android.view.Gravity
 import android.view.View
+import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
@@ -41,6 +43,7 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
     private val theme: Theme get() = scope.theme
     private val windowManager: BoardWindowManager by instance()
     private var clipboardPopup: PopupWindow? = null
+    private var updateClipboardToolbar: (() -> Unit)? = null
 
     override val title: String by lazy {
         context.getString(R.string.word_segment)
@@ -112,9 +115,7 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
             copyButton.apply {
                 isEnabled = false
                 setOnClickListener {
-                    val text = adapter.joinedSegments
-                    clipboardManager.setPrimaryClip(ClipData.newPlainText("", text))
-                    clipboardPopup?.dismiss() ?: windowManager.attachWindow(KeyboardWindow)
+                    copySelected()
                 }
             }
         }
@@ -140,6 +141,10 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
     override fun onCreateBarView(): View = toolbarButtons
 
     private fun onSelectionChanged() {
+        updateClipboardToolbar?.let {
+            it()
+            return
+        }
         val joined = adapter.joinedSegments
         if (clipboardPopup == null) service.updateComposingText(joined)
 
@@ -160,7 +165,12 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
         return ui.root
     }
 
-    internal fun openFromClipboard(anchor: View): PopupWindow {
+    private fun copySelected() {
+        clipboardManager.setPrimaryClip(ClipData.newPlainText("", adapter.joinedSegments))
+        clipboardPopup?.dismiss() ?: windowManager.attachWindow(KeyboardWindow)
+    }
+
+    internal fun openFromClipboard(anchor: View, translate: (String) -> Unit, search: (String) -> Unit): PopupWindow {
         val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFF353535.toInt())
@@ -186,16 +196,64 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
                 textSize = 14f
                 setTextColor(0xFFB3B3B3.toInt())
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(toolbarButtons)
         }
         content.addView(header, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(37)))
         content.addView(onCreateView().apply {
             setBackgroundColor(0xFF353535.toInt())
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        val footer = LinearLayout(context).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(15), 0, dp(15), 0)
+            setBackgroundColor(0xFF424242.toInt())
+        }
+        val selectAll = CheckBox(context).apply {
+            buttonTintList = null
+            setButtonDrawable(R.drawable.cherry_clipboard_checkbox)
+            setText(R.string.cherry_clipboard_select_all)
+            setTextColor(0xFFB3B3B3.toInt())
+            setOnClickListener {
+                if (isChecked) adapter.selectAll() else adapter.deselect()
+                onSelectionChanged()
+            }
+        }
+        footer.addView(selectAll)
+        footer.addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+        val buttons = listOf(
+            Triple("copy", android.R.string.copy) { copySelected() },
+            Triple("translate", R.string.cherry_clipboard_translate) { translate(adapter.joinedSegments) },
+            Triple("search", R.string.cherry_clipboard_search) { search(adapter.joinedSegments) },
+        ).map { (key, label, action) ->
+            ImageView(context).apply {
+                contentDescription = context.getString(label)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setImageDrawable(scope.drawable("clipboard-segments-$key.png"))
+                if (drawable == null) setImageResource(when (key) {
+                    "copy" -> R.drawable.ic_baseline_content_copy_24
+                    "search" -> R.drawable.ic_baseline_search_24
+                    else -> android.R.drawable.ic_menu_edit
+                })
+                setColorFilter(0xFFB3B3B3.toInt())
+                setOnClickListener { action() }
+                footer.addView(this, LinearLayout.LayoutParams(dp(32), LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                    if (key != "search") marginEnd = dp(20)
+                })
+            }
+        }
+        updateClipboardToolbar = {
+            selectAll.isChecked = adapter.itemCount > 0 && adapter.isAllSelected
+            val hasSelection = adapter.selectionSnapshot.isNotEmpty()
+            buttons.forEach {
+                it.isEnabled = hasSelection
+                it.alpha = if (hasSelection) 1f else 0.4f
+            }
+        }
+        content.addView(footer, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(37)))
         adapter.submitList(NativeTokenizer.tokenize(source))
+        onSelectionChanged()
         ui.recyclerView.addOnItemTouchListener(touchListener)
         popup.setOnDismissListener {
             ui.recyclerView.removeOnItemTouchListener(touchListener)
+            updateClipboardToolbar = null
             clipboardPopup = null
         }
         popup.showAsDropDown(anchor, 0, -anchor.height)
