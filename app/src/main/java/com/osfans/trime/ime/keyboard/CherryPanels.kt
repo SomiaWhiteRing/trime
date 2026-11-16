@@ -6,6 +6,9 @@ package com.osfans.trime.ime.keyboard
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
@@ -63,30 +66,26 @@ internal class CherryNumberWindow(
         background = scope.drawable("cherry-number-panel.png")
         val numbers = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9")
         numbers.forEachIndexed { index, number ->
-            cell(hitTarget(context, number) { service.commitText(number) }, 200 + 230 * (index % 3), 2 + 175 * (index / 3), 220, 175)
+            val key = hitTarget(context, number) { service.commitText(number) }.withNumericPress(number)
+            cell(key, 200 + 230 * (index % 3), 2 + 175 * (index / 3), 220, 175)
         }
-        cell(hitTarget(context, ".") { service.commitText(".") }, 200, 527, 220, 175)
+        cell(hitTarget(context, ".") { service.commitText(".") }.withNumericPress("period"), 200, 527, 220, 175)
         cell(hitTarget(context, "0") { service.commitText("0") }.apply {
             setOnLongClickListener { key("VOICE_ASSIST"); true }
-        }, 430, 527, 220, 175)
+        }.withNumericPress("0"), 430, 527, 220, 175)
         cell(hitTarget(context, "符号") {
             manager.attachWindow(CherrySymbolsWindow(di, catalog) { manager.attachWindow(this@CherryNumberWindow) })
-        }, 660, 527, 220, 175)
-        cell(hitTarget(context, "退格") { key("BackSpace") }, 890, 2, 226, 175)
+        }.withNumericPress("symbols"), 660, 527, 220, 175)
+        cell(hitTarget(context, "退格") { key("BackSpace") }.withNumericPress("backspace"), 890, 2, 226, 175)
         val enter = label(context, enterKey.keyLabel, 14f) { key("Return") }.apply {
-            val idle = scope.drawable("cherry-number-enter.png")
-            val pressed = scope.drawable("cherry-number-enter-pressed.png")
-            background = if (idle != null && pressed != null) StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_pressed), pressed)
-                addState(intArrayOf(), idle)
-            } else idle
+            withNumericPress("enter", scope.drawable("cherry-number-enter.png"))
             setPadding(0, 0, 0, context.dp(5))
         }
         cell(enter, 892, 177, 224, 175)
         cell(hitTarget(context, "空格") { service.commitText(" ") }.apply {
             setOnLongClickListener { key("VOICE_ASSIST"); true }
-        }, 890, 352, 226, 175)
-        cell(hitTarget(context, "返回") { manager.attachWindow(KeyboardWindow) }, 890, 527, 226, 175)
+        }.withNumericPress("space"), 890, 352, 226, 175)
+        cell(hitTarget(context, "返回") { manager.attachWindow(KeyboardWindow) }.withNumericPress("return"), 890, 527, 226, 175)
 
         val sidebar = ScrollView(context).apply {
             isVerticalScrollBarEnabled = false
@@ -105,6 +104,14 @@ internal class CherryNumberWindow(
 
     private fun key(action: String) {
         actions.listener.onAction(scope.theme.resolveAction(action))
+    }
+
+    private fun View.withNumericPress(name: String, idle: Drawable? = null): View = apply {
+        val pressed = scope.drawable("cherry-number-$name-pressed.png")
+        background = if (pressed != null) StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), pressed)
+            addState(intArrayOf(), idle ?: ColorDrawable(Color.TRANSPARENT))
+        } else idle
     }
 
     override fun onAttached() = Unit

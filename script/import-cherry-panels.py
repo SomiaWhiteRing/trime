@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageChops
 import configparser
 import io
 import zipfile
@@ -81,27 +81,54 @@ for y in range(54, 107):
         weight = (x - 66) / 96
         enter.putpixel((x, y), tuple(round(a + (b - a) * weight) for a, b in zip(left, right)))
 enter.save(assets / "cherry-number-enter.png")
-sheet, index = config["STYLE242"]["hl_img"].split(",")
-tile = resource(f"res/{sheet}.til")[f"IMG{index}"]
-source_x, source_y, _, _ = map(int, tile["source_rect"].split(","))
-inner_x, inner_y, inner_width, inner_height = map(int, tile["inner_rect"].split(","))
-pressed = sprite(sheet, int(index)).convert("RGBA")
-inner_x -= source_x
-inner_y -= source_y
-xs = (0, inner_x, inner_x + inner_width, pressed.width)
-ys = (0, inner_y, inner_y + inner_height, pressed.height)
-scale = number.width / 1080
-dest_xs = (0, round(xs[1] * scale), enter.width - round((xs[3] - xs[2]) * scale), enter.width)
-dest_ys = (0, round(ys[1] * scale), enter.height - round((ys[3] - ys[2]) * scale), enter.height)
-pressed_enter = enter.convert("RGBA")
-for row in range(3):
-    for col in range(3):
-        patch = pressed.crop((xs[col], ys[row], xs[col + 1], ys[row + 1])).resize(
-            (dest_xs[col + 1] - dest_xs[col], dest_ys[row + 1] - dest_ys[row]),
-            Image.Resampling.BILINEAR,
-        )
-        pressed_enter.alpha_composite(patch, (dest_xs[col], dest_ys[row]))
-pressed_enter.save(assets / "cherry-number-enter-pressed.png")
+
+def render_pressed_numeric_key(name, idle, style, preserve_label=True):
+    sheet, index = config[f"STYLE{style}"]["hl_img"].split(",")
+    tile = resource(f"res/{sheet}.til")[f"IMG{index}"]
+    source_x, source_y, _, _ = map(int, tile["source_rect"].split(","))
+    inner_x, inner_y, inner_width, inner_height = map(int, tile["inner_rect"].split(","))
+    sprite_image = sprite(sheet, int(index)).convert("RGBA")
+    inner_x -= source_x
+    inner_y -= source_y
+    xs = (0, inner_x, inner_x + inner_width, sprite_image.width)
+    ys = (0, inner_y, inner_y + inner_height, sprite_image.height)
+    scale = number.width / 1080
+    dest_xs = (0, round(xs[1] * scale), idle.width - round((xs[3] - xs[2]) * scale), idle.width)
+    dest_ys = (0, round(ys[1] * scale), idle.height - round((ys[3] - ys[2]) * scale), idle.height)
+    highlighted = idle.convert("RGBA")
+    for row in range(3):
+        for col in range(3):
+            patch = sprite_image.crop((xs[col], ys[row], xs[col + 1], ys[row + 1])).resize(
+                (dest_xs[col + 1] - dest_xs[col], dest_ys[row + 1] - dest_ys[row]),
+                Image.Resampling.BILINEAR,
+            )
+            highlighted.alpha_composite(patch, (dest_xs[col], dest_ys[row]))
+    if preserve_label:
+        red, green, blue = idle.split()
+        label = ImageChops.darker(red, ImageChops.darker(green, blue))
+        label = label.point(lambda level: max(0, min(255, (level - 100) * 6)))
+        if name == "space":
+            logo_bounds = (52, 84, 174, 112)
+            logo = ImageChops.subtract(red, green).crop(logo_bounds)
+            logo = logo.point(lambda level: max(0, min(255, (level - 115) * 8)))
+            label.paste(logo, logo_bounds)
+        highlighted.paste(idle, mask=label)
+    highlighted.save(assets / f"cherry-number-{name}-pressed.png")
+
+
+render_pressed_numeric_key("enter", enter, 242, preserve_label=False)
+for index in range(9):
+    x, y = 200 + 230 * (index % 3), 2 + 175 * (index // 3)
+    render_pressed_numeric_key(str(index + 1), number.crop((x, y, x + 220, y + 175)), 246 if index < 3 else 241)
+for name, x, y, width, style in (
+    ("period", 200, 527, 220, 241),
+    ("0", 430, 527, 220, 241),
+    ("symbols", 660, 527, 220, 241),
+    ("backspace", 890, 2, 226, 252),
+    ("space", 890, 352, 226, 242),
+    ("return", 890, 527, 226, 242),
+):
+    render_pressed_numeric_key(name, number.crop((x, y, x + width, y + 175)), style)
 sidebar=number.crop((9,32,186,667))
 erase_labels(sidebar,(26,0,150,sidebar.height),149)
 sidebar.save(assets/'cherry-number-sidebar.png')
