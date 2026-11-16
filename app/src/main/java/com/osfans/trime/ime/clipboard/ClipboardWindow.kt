@@ -128,6 +128,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
     private val prefs = AppPrefs.defaultInstance().clipboard
     private val clipboardReturnAfterPaste by prefs.clipboardReturnAfterPaste
+    private val lockUpdates = mutableListOf<() -> Unit>()
 
     private val clipboardBeansPager by lazy {
         Pager(PagingConfig(pageSize = 16)) { ClipboardHelper.allBeans() }
@@ -301,43 +302,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         addView(
                             FrameLayout(context).apply {
                                 setBackgroundColor(0xFF424242.toInt())
-                                val lock = ImageView(context).apply {
-                                    scaleType = ImageView.ScaleType.CENTER_INSIDE
-                                    contentDescription = context.getString(R.string.clipboard_return_after_paste)
-                                }
-                                val updateLock = {
-                                    val locked = !clipboardReturnAfterPaste
-                                    lock.isSelected = locked
-                                    val state = if (locked) "locked" else "unlocked"
-                                    val artwork = scope.drawable("clipboard-lock-$state.png")
-                                    if (artwork == null) {
-                                        lock.setImageResource(android.R.drawable.ic_lock_lock)
-                                    } else {
-                                        lock.setImageDrawable(artwork)
-                                    }
-                                    lock.imageTintList = ColorStateList.valueOf(
-                                        if (locked) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt(),
-                                    )
-                                }
-                                updateLock()
-                                lock.setOnClickListener {
-                                    prefs.clipboardReturnAfterPaste.setValue(!clipboardReturnAfterPaste)
-                                    updateLock()
-                                }
-                                addView(lock, FrameLayout.LayoutParams(context.dp(61), FrameLayout.LayoutParams.MATCH_PARENT))
-                                addView(
-                                    ImageView(context).apply {
-                                        scaleType = ImageView.ScaleType.CENTER_INSIDE
-                                        contentDescription = "设置"
-                                        setImageDrawable(scope.drawable("clipboard-footer-settings.png"))
-                                        if (drawable == null) setImageResource(android.R.drawable.ic_menu_preferences)
-                                        imageTintList = ColorStateList.valueOf(0xFFB3B3B3.toInt())
-                                        setOnClickListener { clipboardLayout.showSettings(createClipboardSettings()) }
-                                    },
-                                    FrameLayout.LayoutParams(context.dp(44), FrameLayout.LayoutParams.MATCH_PARENT).apply {
-                                        marginStart = context.dp(96)
-                                    },
-                                )
+                                addView(createClipboardLock(), FrameLayout.LayoutParams(context.dp(61), FrameLayout.LayoutParams.MATCH_PARENT))
+                                addView(createClipboardSettingsButton(), FrameLayout.LayoutParams(context.dp(44), FrameLayout.LayoutParams.MATCH_PARENT).apply {
+                                    marginStart = context.dp(96)
+                                })
                                 addView(createSelectionFooter(), FrameLayout.LayoutParams(
                                     FrameLayout.LayoutParams.MATCH_PARENT,
                                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -351,6 +319,63 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 refreshCategoryLabels()
             }
         }
+    }
+
+    private fun createClipboardLock(recommendation: Boolean = false): ImageView = ImageView(context).apply {
+        contentDescription = context.getString(R.string.clipboard_return_after_paste)
+        val update = {
+            val locked = !clipboardReturnAfterPaste
+            val state = if (locked) "locked" else "unlocked"
+            val reference = if (recommendation) scope.drawable("clipboard-recommend-lock-$state.png") else null
+            isSelected = locked
+            if (reference != null) {
+                scaleType = ImageView.ScaleType.FIT_XY
+                imageTintList = null
+                setImageDrawable(reference)
+            } else {
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                val artwork = scope.drawable("clipboard-lock-$state.png")
+                if (artwork == null) setImageResource(android.R.drawable.ic_lock_lock) else setImageDrawable(artwork)
+                imageTintList = ColorStateList.valueOf(
+                    if (locked) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt(),
+                )
+            }
+        }
+        lockUpdates.add(update)
+        update()
+        setOnClickListener {
+            prefs.clipboardReturnAfterPaste.setValue(!clipboardReturnAfterPaste)
+            lockUpdates.forEach { it() }
+        }
+    }
+
+    private fun createClipboardSettingsButton(recommendation: Boolean = false): ImageView = ImageView(context).apply {
+        contentDescription = "设置"
+        val reference = if (recommendation) scope.drawable("clipboard-recommend-settings.png") else null
+        if (reference != null) {
+            scaleType = ImageView.ScaleType.FIT_XY
+            setImageDrawable(reference)
+        } else {
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setImageDrawable(scope.drawable("clipboard-footer-settings.png"))
+            if (drawable == null) setImageResource(android.R.drawable.ic_menu_preferences)
+            imageTintList = ColorStateList.valueOf(0xFFB3B3B3.toInt())
+        }
+        setOnClickListener { clipboardLayout.showSettings(createClipboardSettings()) }
+    }
+
+    private fun createRecommendationFooter() = FrameLayout(context).apply {
+        setBackgroundColor(0xFF424242.toInt())
+        addView(View(context).apply {
+            setBackgroundColor(0xFF4D4D4D.toInt())
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, context.dp(1f / 3).roundToInt().coerceAtLeast(1)))
+        addView(createClipboardLock(recommendation = true), FrameLayout.LayoutParams(context.dp(61), FrameLayout.LayoutParams.MATCH_PARENT))
+        addView(
+            createClipboardSettingsButton(recommendation = true),
+            FrameLayout.LayoutParams(context.dp(44), FrameLayout.LayoutParams.MATCH_PARENT).apply {
+                marginStart = context.dp(96)
+            },
+        )
     }
 
     private fun createSelectionFooter() = LinearLayout(context).apply {
@@ -647,11 +672,16 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             root.setBackgroundColor(0xFF353535.toInt())
             val recommendations = CherryClipboardRecommendationView.loadProfile()
             if (recommendations.isNotEmpty()) {
-                root.addView(CherryClipboardRecommendationView(context, scope, recommendations) { phrase ->
-                    if (service.commitText(phrase) && clipboardReturnAfterPaste) {
-                        windowManager.attachWindow(KeyboardWindow)
-                    }
-                }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                val content = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(CherryClipboardRecommendationView(context, scope, recommendations) { phrase ->
+                        if (service.commitText(phrase) && clipboardReturnAfterPaste) {
+                            windowManager.attachWindow(KeyboardWindow)
+                        }
+                    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+                    addView(createRecommendationFooter(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(29)))
+                }
+                root.addView(content, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 return@apply
             }
             root.addView(LinearLayout(context).apply {

@@ -27,6 +27,8 @@ parser.add_argument("--clipboard-chooser-tabs", nargs=2, action="append", defaul
                     help="1116 x 184 chooser crop from y=1630 with history, phrases, or recommend selected")
 parser.add_argument("--clipboard-filter", nargs=2, action="append", default=[], metavar=("SELECTED", "CAPTURE"),
                     help="1116 x 90 history filter crop from y=1754 with one of all, recent, text, number, link selected")
+parser.add_argument("--clipboard-recommendation-footer", nargs=2, metavar=("UNLOCKED", "LOCKED"),
+                    help="1116 x 87 recommendation footer captures from y=2369 before and after locking")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -138,6 +140,16 @@ for selected, capture in args.clipboard_filter:
         left = 24 + 135 * index
         state = "active" if name == selected else "idle"
         reference.crop((left, 0, left + 135, 90)).save(assets / f"clipboard-filter-{name}-{state}.png")
+
+
+if args.clipboard_recommendation_footer:
+    for state, capture in zip(("unlocked", "locked"), args.clipboard_recommendation_footer):
+        reference = Image.open(capture).convert("RGB")
+        if reference.size != (1116, 87):
+            raise ValueError("Expected a CHERRY recommendation footer crop at 1116 x 87")
+        reference.crop((0, 0, 183, 87)).save(assets / f"clipboard-recommend-lock-{state}.png")
+        if state == "unlocked":
+            reference.crop((288, 0, 420, 87)).save(assets / "clipboard-recommend-settings.png")
 
 
 def resource(file):
