@@ -13,7 +13,6 @@ import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.Pager
@@ -72,6 +71,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     private val category = MutableStateFlow(Category.ALL)
+    private val tabLabels by lazy {
+        listOf(R.string.clipboard, if (usesCherryLayout) R.string.cherry_clipboard_phrases else R.string.collection)
+    }
     private val numericClip = Regex("""[+\-]?[\p{Nd}]+(?:[.,]\p{Nd}+)?""")
     private lateinit var categoryLabels: List<TextView>
     private val historyCount by lazy {
@@ -249,7 +251,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     override fun onCreateView() = ClipboardLayout(context, scope).apply {
         clipboardLayout = this
         clipboardPagesAdapter = object : ClipboardPagesAdapter() {
-            override fun getItemCount(): Int = 2
+            override fun getItemCount(): Int = tabLabels.size
             override fun onCreatePage(position: Int): ClipboardPageUi = when (position) {
                 0 -> clipboardPage
                 else -> collectionPage
@@ -264,15 +266,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 configureTab(tabUi, position)
             }
             backButton?.setOnClickListener { windowManager.attachWindow(KeyboardWindow) }
-            deleteAllButton.setOnClickListener { anchor ->
+            actionButton.setOnClickListener {
                 if (usesCherryLayout) {
-                    PopupMenu(context, anchor).apply {
-                        menu.add(R.string.delete_all).setOnMenuItemClickListener {
-                            deleteCurrentPage(viewPager.currentItem)
-                            true
-                        }
-                        show()
-                    }
+                    toggleTabChooser(tabLabels)
                 } else {
                     deleteCurrentPage(viewPager.currentItem)
                 }
@@ -315,11 +311,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         tabUi: InputTabLayout.TabUi,
         position: Int,
     ) {
-        val label =
-            when (position) {
-                0 -> R.string.clipboard
-                else -> if (usesCherryLayout) R.string.cherry_clipboard_phrases else R.string.collection
-            }
+        val label = tabLabels[position]
         tabUi.label.apply {
             setText(label)
             textSize = if (usesCherryLayout) 14f else theme.style.candidateTextSize
@@ -403,7 +395,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
     override fun refreshColors() {
         if (!wasAttached) return
-        clipboardLayout.titleUi.deleteAllButton.refreshColors()
+        clipboardLayout.titleUi.actionButton.refreshColors()
         if (::categoryLabels.isInitialized) {
             refreshCategoryLabels()
             historyCount.setTextColor(scope.colors.keySymbolColor)

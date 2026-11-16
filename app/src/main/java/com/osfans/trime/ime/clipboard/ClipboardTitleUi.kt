@@ -48,7 +48,7 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     }
 
     val backButton = if (cherry) cherryButton("clipboard-title-back.png") else null
-    val deleteAllButton = if (cherry) {
+    val actionButton = if (cherry) {
         cherryButton("clipboard-title-menu.png")
     } else {
         ToolButton(ctx, R.drawable.ic_baseline_delete_sweep_24, scope)
@@ -91,7 +91,7 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
             })
         }
         add(
-            deleteAllButton,
+            actionButton,
             lParams(dp(size), dp(size)) {
                 centerVertically()
                 endOfParent()
