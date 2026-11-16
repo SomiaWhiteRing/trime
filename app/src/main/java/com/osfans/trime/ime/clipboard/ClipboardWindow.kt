@@ -143,6 +143,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private val prefs = AppPrefs.defaultInstance().clipboard
     private val clipboardReturnAfterPaste by prefs.clipboardReturnAfterPaste
     private val lockUpdates = mutableListOf<() -> Unit>()
+    private val sendModeUpdates = mutableListOf<(CherrySendMode) -> Unit>()
     private val recommendationPreferences = service.getSharedPreferences("cherry_recommendations", Context.MODE_PRIVATE)
     private var recommendationSendMode = CherrySendMode.entries.firstOrNull {
         it.name == recommendationPreferences.getString("send_mode", null)
@@ -237,6 +238,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     val ids = (listOf(bean.id) + recentPhraseIds.value.filterNot { it == bean.id }).take(300)
                     recentPhraseIds.value = ids
                     recentPhrasePrefs.edit().putString("ids", ids.joinToString(",")).apply()
+                    if (recommendationSendMode == CherrySendMode.AUTOMATIC) {
+                        service.sendRecommendationInCurrentEditor()
+                    }
                 }
                 if (clipboardReturnAfterPaste) {
                     windowManager.attachWindow(KeyboardWindow)
@@ -401,7 +405,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         setOnClickListener { clipboardLayout.showSettings(createClipboardSettings()) }
     }
 
-    private fun createRecommendationFooter(onModeChanged: (CherrySendMode) -> Unit) = FrameLayout(context).apply {
+    private fun createPhraseSendFooter(onModeChanged: (CherrySendMode) -> Unit = {}) = FrameLayout(context).apply {
         setBackgroundColor(0xFF424242.toInt())
         addView(View(context).apply {
             setBackgroundColor(0xFF4D4D4D.toInt())
@@ -418,9 +422,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             textSize = 14f
             setTextColor(0xFFB3B3B3.toInt())
         }
-        val updateMode = {
-            val name = recommendationSendMode.name.lowercase()
-            val label = context.getString(recommendationSendMode.footer)
+        val updateMode: (CherrySendMode) -> Unit = { mode ->
+            val name = mode.name.lowercase()
+            val label = context.getString(mode.footer)
             val artwork = when (label) {
                 "手动", "自动", "随机", "顺序" -> scope.drawable("clipboard-recommend-send-$name.png")
                 else -> null
@@ -429,7 +433,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             sendingMode.text = "$label ▾"
             sendingMode.setTextColor(if (artwork == null) 0xFFB3B3B3.toInt() else Color.TRANSPARENT)
         }
-        updateMode()
+        updateMode(recommendationSendMode)
+        sendModeUpdates.add { mode ->
+            updateMode(mode)
+            onModeChanged(mode)
+        }
         sendingMode.setOnClickListener {
             clipboardLayout.showPanelOverlay(createCherrySendModePanel(
                 context,
@@ -439,8 +447,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             ) { mode ->
                 recommendationSendMode = mode
                 recommendationPreferences.edit().putString("send_mode", mode.name).apply()
-                onModeChanged(mode)
-                updateMode()
+                sendModeUpdates.forEach { it(mode) }
                 clipboardLayout.dismissPanelOverlay()
             })
         }
@@ -765,6 +772,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         orientation = LinearLayout.VERTICAL
                         addView(filters, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(34)))
                         addView(recyclerView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+                        addView(
+                            createPhraseSendFooter(),
+                            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(29)),
+                        )
                     },
                     FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
                 )
@@ -801,7 +812,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     }
                     addView(recommendationsView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
                     addView(
-                        createRecommendationFooter(recommendationsView::updateMode),
+                        createPhraseSendFooter(recommendationsView::updateMode),
                         LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(29)),
                     )
                 }
