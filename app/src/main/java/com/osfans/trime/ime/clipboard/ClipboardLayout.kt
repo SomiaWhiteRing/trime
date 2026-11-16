@@ -33,6 +33,8 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
     val titleUi = ClipboardTitleUi(context, scope)
     private var tabChooser: FrameLayout? = null
     private var settings: View? = null
+    private var segments: View? = null
+    internal val isShowingSegments get() = segments != null
 
     init {
         add(
@@ -44,6 +46,7 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 dismissTabChooser()
+                dismissSegments()
             }
         })
     }
@@ -51,6 +54,20 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
     private fun dismissTabChooser() {
         tabChooser?.let(::removeView)
         tabChooser = null
+    }
+
+    internal fun showSegments(content: View) {
+        dismissTabChooser()
+        dismissSegments()
+        segments = content
+        add(content, lParams { centerInParent() })
+    }
+
+    internal fun dismissSegments(): Boolean {
+        val content = segments ?: return false
+        removeView(content)
+        segments = null
+        return true
     }
 
     fun showSettings(content: View) {

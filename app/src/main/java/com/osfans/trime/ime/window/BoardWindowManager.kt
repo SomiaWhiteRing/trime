@@ -140,4 +140,7 @@ class BoardWindowManager(override val di: DI) : DIAware {
     val view: FrameLayout by lazy { context.frameLayout(R.id.input_window) }
 
     fun isAttached(window: BoardWindow) = currentWindow === window
+
+    internal fun handleSegmentsBack(commit: Boolean) =
+        (currentWindow as? ClipboardWindow)?.handleSegmentsBack(commit) == true
 }

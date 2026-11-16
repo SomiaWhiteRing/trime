@@ -790,6 +790,7 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         keyCode: Int,
         event: KeyEvent,
     ): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && inputView?.handleSegmentsBack(commit = false) == true) return true
         if (inputDeviceManager.evaluateOnKeyDown(event, this)) {
             decorLocationUpdated = false
             forceShowSelf()
@@ -800,7 +801,8 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
     override fun onKeyUp(
         keyCode: Int,
         event: KeyEvent,
-    ): Boolean = forwardKeyEvent(event) || super.onKeyUp(keyCode, event)
+    ): Boolean = (keyCode == KeyEvent.KEYCODE_BACK && inputView?.handleSegmentsBack(commit = true) == true) ||
+        forwardKeyEvent(event) || super.onKeyUp(keyCode, event)
 
     // Added in API level 14, deprecated in 29
     // it's needed because editors still use it even on API 36

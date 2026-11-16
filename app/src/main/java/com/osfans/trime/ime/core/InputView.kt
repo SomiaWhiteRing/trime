@@ -126,6 +126,8 @@ class InputView(
     private val enterKeyDisplay: EnterKeyDisplayDelegate by instance()
     private val preedit: PreeditDelegate by instance()
     private val windowManager: BoardWindowManager by instance()
+
+    internal fun handleSegmentsBack(commit: Boolean) = windowManager.handleSegmentsBack(commit)
     private val inputBar: InputBarDelegate by instance()
     private val keyboardWindow: KeyboardWindow by instance()
     private val liquidWindow: LiquidWindow by instance()

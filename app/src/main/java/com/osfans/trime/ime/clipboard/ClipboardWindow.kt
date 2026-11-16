@@ -122,7 +122,6 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private var clipboardCountJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
     private var translationPopup: PopupWindow? = null
-    private var segmentsPopup: PopupWindow? = null
     private var deleteConfirmation: PopupWindow? = null
     private lateinit var selectionFooter: LinearLayout
     private lateinit var selectionDelete: TextView
@@ -398,12 +397,18 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private fun showSegments(text: String) {
         val segments = SegmentsWindow(di, text)
         if (usesCherryLayout) {
-            segmentsPopup?.dismiss()
-            segmentsPopup = segments.openFromClipboard(clipboardLayout, ::translateClipboard, ::searchClipboard)
+            clipboardLayout.showSegments(segments.createClipboardOverlay(
+                { clipboardLayout.dismissSegments() },
+                ::translateClipboard,
+                ::searchClipboard,
+            ))
         } else {
             windowManager.attachWindow(segments)
         }
     }
+
+    internal fun handleSegmentsBack(commit: Boolean): Boolean =
+        if (commit) clipboardLayout.dismissSegments() else clipboardLayout.isShowingSegments
 
     private fun translateClipboard(text: String) {
         if (text.isBlank()) return
@@ -563,6 +568,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 configureTab(tabUi, position)
             }
             backButton?.setOnClickListener {
+                if (dismissSegments()) return@setOnClickListener
                 if (clipboardBeansAdapter.selection != null) updateSelection(null)
                 else if (!dismissSettings()) windowManager.attachWindow(KeyboardWindow)
             }
@@ -732,8 +738,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     override fun onDetached() {
-        segmentsPopup?.dismiss()
-        segmentsPopup = null
+        clipboardLayout.dismissSegments()
         deleteConfirmation?.dismiss()
         deleteConfirmation = null
         translationPopup?.dismiss()
