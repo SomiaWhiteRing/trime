@@ -132,12 +132,12 @@ internal class CherrySymbolsWindow(
     private val actions: CommonKeyboardActionListener by instance()
     private val preferences = service.getSharedPreferences("cherry_symbols", Context.MODE_PRIVATE)
     private lateinit var grid: LinearLayout
+    private lateinit var symbolScroll: ScrollView
     private lateinit var categoryLabels: List<TextView>
     private lateinit var previous: View
     private lateinit var next: View
     private lateinit var lock: View
     private var category = 0
-    private var page = 0
     private var locked = preferences.getBoolean("locked", true)
     private var previousInputBarVisibility = View.VISIBLE
     private var previousWindowHeight = 0
@@ -152,7 +152,7 @@ internal class CherrySymbolsWindow(
                 categoryLabels = catalog.groups.mapIndexed { index, group ->
                     label(context, group.label, 15f) {
                         category = index
-                        page = 0
+                        symbolScroll.scrollTo(0, 0)
                         render()
                     }.also { addView(it, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, context.dp(40))) }
                 }
@@ -160,21 +160,44 @@ internal class CherrySymbolsWindow(
         }
         cell(sidebar, 16, 13, 169, 609)
         grid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        cell(grid, 199, 9, 905, 640)
+        symbolScroll = object : ScrollView(context) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val viewport = MeasureSpec.getSize(heightMeasureSpec)
+                val rowHeight = viewport / 4
+                // CHERRY can scroll five more reference pixels after a full final page.
+                val tail = if (grid.childCount > 4) (viewport * 5f / 640).roundToInt() else 0
+                for (i in 0 until grid.childCount) {
+                    grid.getChildAt(i).layoutParams.height = rowHeight
+                }
+                grid.setPadding(0, 0, 0, tail)
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+            }
+
+            override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+                super.onLayout(changed, left, top, right, bottom)
+                updateFooter()
+            }
+        }.apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+            setOnScrollChangeListener { _, _, _, _, _ -> updateFooter() }
+        }
+        cell(symbolScroll, 199, 9, 905, 640)
         lock = hitTarget(context, "锁定") {
             locked = !locked
             preferences.edit().putBoolean("locked", locked).apply()
-            render()
+            updateLock()
         }
+        updateLock()
         previous = pagingKey("上一页") {
-            if (page > 0) {
-                page--
-                render()
-            }
+            val scroll = symbolScroll
+            val target = if (scroll.scrollY <= scroll.height + grid.paddingBottom) 0 else scroll.scrollY - scroll.height
+            scroll.smoothScrollTo(0, target)
         }
         next = pagingKey("下一页") {
-            page++
-            render()
+            val scroll = symbolScroll
+            scroll.smoothScrollTo(0, minOf(scroll.scrollY + scroll.height, grid.height - scroll.height))
         }
         cell(lock, 20, 675, 222, 121)
         cell(previous, 243, 675, 203, 121)
@@ -218,12 +241,10 @@ internal class CherrySymbolsWindow(
             rows.last().add(symbol to span)
             used += span
         }
-        val visibleRows = rows.drop(page * 4).take(4)
         grid.removeAllViews()
-        repeat(4) { row ->
+        rows.forEach { items ->
             grid.addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
-                val items = visibleRows.getOrNull(row).orEmpty()
                 items.forEach { (symbol, span) ->
                     val button = label(context, symbol, 18f) {
                         service.commitText(symbol)
@@ -241,20 +262,29 @@ internal class CherrySymbolsWindow(
                 if (freeSpans > 0) {
                     addView(View(context), LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, freeSpans.toFloat()))
                 }
-            }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+            }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         }
+    }
+
+    private fun updateLock() {
         lock.isSelected = locked
         lock.background = if (locked) footerBackground("lock-locked") else
             footerBackground("lock-unlocked", scope.drawable("cherry-symbol-lock-unlocked.png"))
-        previous.isEnabled = page > 0
-        next.isEnabled = (page + 1) * 4 < rows.size
-        previous.background = if (previous.isEnabled) {
-            footerBackground("previous", scope.drawable("cherry-symbol-previous-enabled.png"))
-        } else {
-            footerBackground("previous-disabled", scope.drawable("cherry-symbol-previous-disabled.png"))
-        }
-        next.background = if (next.isEnabled) footerBackground("next") else
-            footerBackground("next-disabled", scope.drawable("cherry-symbol-next-disabled.png"))
+    }
+
+    private fun updateFooter() {
+        val current = symbolScroll.scrollY
+        previous.updatePagingState(current > 0, "previous", "previous-enabled")
+        next.updatePagingState(current < grid.height - symbolScroll.height, "next", null)
+    }
+
+    private fun View.updatePagingState(enabled: Boolean, key: String, enabledIdle: String?) {
+        if (background != null && isEnabled == enabled) return
+        isEnabled = enabled
+        val state = if (enabled) key else "$key-disabled"
+        val idle = if (enabled) enabledIdle else state
+        background = footerBackground(state, idle?.let { scope.drawable("cherry-symbol-$it.png") })
+            ?: ColorDrawable(Color.TRANSPARENT)
     }
 
     private fun pagingKey(description: String, click: () -> Unit): View = object : View(context) {
