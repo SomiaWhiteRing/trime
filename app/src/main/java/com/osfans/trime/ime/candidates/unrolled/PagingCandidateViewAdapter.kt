@@ -15,6 +15,7 @@ import com.osfans.trime.ime.candidates.CandidateViewHolder
 
 open class PagingCandidateViewAdapter(
     val scope: ThemeScope,
+    private val cherryExpanded: Boolean = false,
 ) : PagingDataAdapter<CandidateProto, CandidateViewHolder>(diffCallback) {
     companion object {
         private val diffCallback =
@@ -46,7 +47,7 @@ open class PagingCandidateViewAdapter(
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int,
-    ): CandidateViewHolder = CandidateViewHolder(CandidateItemUi(parent.context, scope))
+    ): CandidateViewHolder = CandidateViewHolder(CandidateItemUi(parent.context, scope, cherryExpanded))
 
     override fun onBindViewHolder(
         holder: CandidateViewHolder,

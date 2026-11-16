@@ -6,6 +6,8 @@ package com.osfans.trime.ime.candidates.unrolled
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -82,7 +84,7 @@ class UnrolledCandidateLayout(
     }
 
     fun installCherryFooter(grid: GridLayoutManager, onReturn: () -> Unit) {
-        setBackgroundColor(0xFF101010.toInt())
+        setBackgroundColor(0xFF0D0D0D.toInt())
         val footer = LinearLayout(context).apply { id = generateViewId() }
         addView(footer, LayoutParams(0, dp(53)).apply {
             startToStart = LayoutParams.PARENT_ID
@@ -93,8 +95,15 @@ class UnrolledCandidateLayout(
             bottomToBottom = LayoutParams.UNSET
             bottomToTop = footer.id
         }
-        recyclerView.setPadding(dp(65), 0, dp(3), 0)
+        recyclerView.setPadding(dp(69), dp(2), dp(2), 0)
         recyclerView.clipToPadding = false
+        recyclerView.scrollBarSize = dp(2)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            recyclerView.verticalScrollbarThumbDrawable = GradientDrawable().apply {
+                setColor(0xFF2E2E2E.toInt())
+                cornerRadius = dp(1).toFloat()
+            }
+        }
         val buttons = listOf("上一页", "下一页", "返回").map { label ->
             TextView(context).apply {
                 contentDescription = label

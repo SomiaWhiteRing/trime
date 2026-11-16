@@ -45,15 +45,16 @@ import splitties.views.horizontalPadding
 class CandidateItemUi(
     override val ctx: Context,
     private val scope: ThemeScope,
+    private val cherryExpanded: Boolean = false,
 ) : Ui {
     private val theme: Theme
         get() = scope.theme
 
-    private val textSize = theme.style.candidateTextSize
+    private val textSize = if (cherryExpanded) 18f else theme.style.candidateTextSize
     private val commentSize = theme.style.commentTextSize
 
     // Read at use time so a scheme switch re-binds rows with the new colors.
-    private val textColor: Int get() = scope.colors.candidateTextColor
+    private val textColor: Int get() = if (cherryExpanded) 0xFFB3B3B3.toInt() else scope.colors.candidateTextColor
     private val commentColor: Int get() = scope.colors.commentTextColor
     private val hlCommentColor: Int get() = scope.colors.hilitedCommentTextColor
     private val hlTextColor: Int get() = scope.colors.hilitedCandidateTextColor

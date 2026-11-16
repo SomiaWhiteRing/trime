@@ -30,7 +30,7 @@ class FlexboxUnrolledCandidateWindow(di: DI) : BaseUnrolledCandidateWindow(di) {
     }
 
     override val adapter by lazy {
-        object : PagingCandidateViewAdapter(scope) {
+        object : PagingCandidateViewAdapter(scope, cherryExpanded = usesCherryLayout) {
             override fun onCreateViewHolder(
                 parent: ViewGroup,
                 viewType: Int,
