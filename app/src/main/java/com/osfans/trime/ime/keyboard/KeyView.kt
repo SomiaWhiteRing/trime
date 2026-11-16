@@ -140,7 +140,7 @@ class KeyView(
                                 val switchMode = {
                                     if (isAttachedToWindow) processKeyAction(action, actionBehavior)
                                 }
-                                if (opensCherryNumbers || key.getLabel() == "En") {
+                                if (opensCherryNumbers || action.command == "cherry_language") {
                                     // Draw the released key before replacing the whole keyboard.
                                     doOnPreDraw { releasedKey -> releasedKey.postOnAnimation(switchMode) }
                                 } else {
