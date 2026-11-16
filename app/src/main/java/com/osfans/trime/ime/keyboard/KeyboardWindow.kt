@@ -275,6 +275,14 @@ class KeyboardWindow(di: DI) :
         Timber.d("Switched to keyboard: $target")
     }
 
+    fun toggleTextSelector() {
+        val target = when (currentKeyboardId) {
+            "cherry_edit", "cherry_select" -> ".default"
+            else -> "cherry_edit"
+        }
+        switchKeyboard(target)
+    }
+
     fun refreshKeyboards(isAll: Boolean = false) {
         val id = currentKeyboardId.ifEmpty { return }
         detachCurrentView()

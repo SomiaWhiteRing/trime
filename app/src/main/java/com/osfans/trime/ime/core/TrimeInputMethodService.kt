@@ -28,6 +28,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
+import android.view.inputmethod.InputConnection
 import android.widget.FrameLayout
 import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
@@ -344,13 +345,43 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         RimeDaemon.destroySession(javaClass.name)
     }
 
+    override fun getCurrentInputConnection(): InputConnection? =
+        inputView?.translationPanel?.inputConnection ?: super.getCurrentInputConnection()
+
+    internal fun toggleTranslation() {
+        val panel = inputView?.translationPanel ?: return
+        if (panel.visibility == View.VISIBLE) {
+            closeTranslation()
+            return
+        }
+        super.getCurrentInputConnection()?.finishComposingText()
+        composingText = ""
+        postRimeJob { clearComposition() }
+        panel.open()
+    }
+
+    internal fun closeTranslation() {
+        inputView?.translationPanel?.close()
+        composingText = ""
+        postRimeJob { clearComposition() }
+    }
+
+    internal fun insertTranslation(text: String) {
+        closeTranslation()
+        commitText(text)
+    }
+
     private fun handleReturnKey() {
+        inputView?.translationPanel?.inputConnection?.let {
+            it.performEditorAction(EditorInfo.IME_ACTION_DONE)
+            return
+        }
         val info = currentInputEditorInfo
         val action = EditorEnterAction.resolve(info.inputType, info.imeOptions, info.actionId, info.actionLabel)
         if (action == null) {
             sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
         } else {
-            currentInputConnection.performEditorAction(action)
+            currentInputConnection?.performEditorAction(action)
         }
     }
 
@@ -537,6 +568,7 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         restarting: Boolean,
     ) {
         composingText = ""
+        inputView?.translationPanel?.close()
         Timber.d("onStartInput: restarting=$restarting")
         val isNullType = attribute.inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_NULL
         postRimeJob {
@@ -599,6 +631,7 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
             finishComposingText()
             monitorCursorAnchor(false)
         }
+        inputView?.translationPanel?.close()
         composingText = ""
         postRimeJob {
             clearComposition()
@@ -936,7 +969,7 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
     fun clearTextSelection() {
         val ic = currentInputConnection ?: return
         val etr = ExtractedTextRequest().apply { token = 0 }
-        val et = currentInputConnection.getExtractedText(etr, 0)
+        val et = ic.getExtractedText(etr, 0)
         et?.let {
             if (it.selectionStart != it.selectionEnd) {
                 ic.setSelection(it.selectionEnd, it.selectionEnd)

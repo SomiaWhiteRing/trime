@@ -8,10 +8,16 @@ package com.osfans.trime.ime.clipboard
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Typeface
+import android.util.Patterns
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
+import androidx.paging.filter
 import com.osfans.trime.R
 import com.osfans.trime.data.db.ClipboardHelper
 import com.osfans.trime.data.db.CollectionHelper
@@ -27,11 +33,18 @@ import com.osfans.trime.ime.window.BoardWindow
 import com.osfans.trime.ime.window.BoardWindowManager
 import com.osfans.trime.ui.main.ClipEditActivity
 import com.osfans.trime.util.AppUtils
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.kodein.di.DI
 import org.kodein.di.instance
+import splitties.dimensions.dp
 import splitties.views.recyclerview.verticalLayoutManager
+import java.util.Calendar
 
 class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.BarBoardWindow(di) {
 
@@ -43,6 +56,21 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private lateinit var clipboardLayout: ClipboardLayout
     private lateinit var clipboardPagesAdapter: ClipboardPagesAdapter
     private var wasAttached = false
+    private val usesCherryLayout: Boolean
+        get() = "cherry_edit" in theme.presetKeyboards
+
+    private enum class Category(val label: Int) {
+        ALL(R.string.cherry_clipboard_all),
+        RECENT(R.string.cherry_clipboard_recent),
+        TEXT(R.string.cherry_clipboard_text),
+        NUMBER(R.string.cherry_clipboard_number),
+        LINK(R.string.cherry_clipboard_link),
+    }
+
+    private val category = MutableStateFlow(Category.ALL)
+    private val numericClip = Regex("""[+\-]?[\p{Nd}]+(?:[.,]\p{Nd}+)?""")
+    private lateinit var categoryLabels: List<TextView>
+    private lateinit var historyCount: TextView
 
     private val prefs = AppPrefs.defaultInstance().clipboard
     private val clipboardReturnAfterPaste by prefs.clipboardReturnAfterPaste
@@ -54,6 +82,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         Pager(PagingConfig(pageSize = 16)) { CollectionHelper.allBeans() }
     }
     private var clipboardBeansSubmitJob: Job? = null
+    private var clipboardCountJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
 
     private val clipboardBeansAdapter by lazy {
@@ -140,6 +169,66 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 layoutManager = verticalLayoutManager()
                 adapter = clipboardBeansAdapter
             }
+            if (usesCherryLayout) {
+                val categories = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(context.dp(8), 0, context.dp(8), 0)
+                }
+                categoryLabels = Category.entries.map { filter ->
+                    TextView(context).apply {
+                        setText(filter.label)
+                        textSize = 14f
+                        gravity = Gravity.CENTER
+                        setPadding(context.dp(8), 0, context.dp(8), 0)
+                        setOnClickListener {
+                            category.value = filter
+                            refreshCategoryLabels()
+                        }
+                        categories.addView(
+                            this,
+                            LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                            ),
+                        )
+                    }
+                }
+                historyCount = TextView(context).apply {
+                    textSize = 13f
+                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                    setTextColor(scope.colors.keySymbolColor)
+                }
+                categories.addView(
+                    historyCount,
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f),
+                )
+                root.removeView(recyclerView)
+                root.addView(
+                    LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(
+                            categories,
+                            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(38)),
+                        )
+                        addView(
+                            recyclerView,
+                            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f),
+                        )
+                    },
+                    FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
+                )
+                refreshCategoryLabels()
+            }
+        }
+    }
+
+    private fun refreshCategoryLabels() {
+        Category.entries.zip(categoryLabels).forEach { (filter, label) ->
+            val selected = filter == category.value
+            label.isSelected = selected
+            label.setTextColor(if (selected) 0xFFC51640.toInt() else scope.colors.keyTextColor)
+            label.paint.isUnderlineText = selected
         }
     }
 
@@ -214,7 +303,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         val label =
             when (position) {
                 0 -> R.string.clipboard
-                else -> R.string.collection
+                else -> if (usesCherryLayout) R.string.cherry_clipboard_phrases else R.string.collection
             }
         tabUi.label.apply {
             setText(label)
@@ -228,8 +317,17 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         wasAttached = true
         clipboardLayout.viewPager.setCurrentItem(initialTab, false)
         clipboardBeansSubmitJob = service.lifecycleScope.launch {
-            clipboardBeansPager.flow.collect {
-                clipboardBeansAdapter.submitData(it)
+            clipboardPages().collectLatest { clipboardBeansAdapter.submitData(it) }
+        }
+        if (usesCherryLayout) {
+            clipboardCountJob = service.lifecycleScope.launch {
+                ClipboardHelper.observeItemCount().collect { count ->
+                    historyCount.text = context.getString(
+                        R.string.cherry_clipboard_count,
+                        count,
+                        prefs.clipboardLimit.getValue(),
+                    )
+                }
             }
         }
         collectionBeansSubmitJob = service.lifecycleScope.launch {
@@ -239,16 +337,45 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun clipboardPages() = category.flatMapLatest { filter ->
+        if (filter == Category.ALL) return@flatMapLatest clipboardBeansPager.flow
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        clipboardBeansPager.flow.map { page ->
+            page.filter { bean ->
+                val text = bean.text.orEmpty().trim()
+                when (filter) {
+                    Category.ALL -> true
+                    Category.RECENT -> bean.time >= today
+                    Category.TEXT -> text.isNotEmpty() &&
+                        !numericClip.matches(text) && !Patterns.WEB_URL.matcher(text).find()
+                    Category.NUMBER -> numericClip.matches(text)
+                    Category.LINK -> Patterns.WEB_URL.matcher(text).find()
+                }
+            }
+        }
+    }
+
     override fun onDetached() {
         clipboardBeansAdapter.dismissPopupMenu()
         collectionBeansAdapter.dismissPopupMenu()
         clipboardBeansSubmitJob?.cancel()
+        clipboardCountJob?.cancel()
         collectionBeansSubmitJob?.cancel()
     }
 
     override fun refreshColors() {
         if (!wasAttached) return
         clipboardLayout.titleUi.deleteAllButton.refreshColors()
+        if (::categoryLabels.isInitialized) {
+            refreshCategoryLabels()
+            historyCount.setTextColor(scope.colors.keySymbolColor)
+        }
         clipboardLayout.titleUi.tabLayout.reconfigureTabs { tabUi, position ->
             configureTab(tabUi, position)
         }

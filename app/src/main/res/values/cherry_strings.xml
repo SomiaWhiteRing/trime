@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cherry_clipboard_all">All</string>
+    <string name="cherry_clipboard_recent">Recent</string>
+    <string name="cherry_clipboard_text">Text</string>
+    <string name="cherry_clipboard_number">Numbers</string>
+    <string name="cherry_clipboard_link">Links</string>
+    <string name="cherry_clipboard_phrases">Common phrases</string>
+    <string name="cherry_translation_hint">Chinese and Japanese translation</string>
+    <string name="cherry_translation_zh_ja">中日 ▾</string>
+    <string name="cherry_translation_ja_zh">日中 ▾</string>
+    <string name="cherry_translation_send">Translate</string>
+    <string name="cherry_translation_close">Close</string>
+    <string name="cherry_clipboard_count">%1$d/%2$d</string>
+</resources>

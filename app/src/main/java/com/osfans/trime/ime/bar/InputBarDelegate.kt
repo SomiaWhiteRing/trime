@@ -67,6 +67,7 @@ class InputBarDelegate(override val di: DI) :
     private val scope: ThemeScope by instance()
     private val theme: Theme get() = scope.theme
     private val windowManager: BoardWindowManager by instance()
+    private val keyboardWindow: KeyboardWindow by instance()
     private val commonKeyboardActionListener: CommonKeyboardActionListener by instance()
     private val candidate: CompactCandidateDelegate by instance()
     private val rime: RimeSession by instance()
@@ -135,10 +136,11 @@ class InputBarDelegate(override val di: DI) :
             // A touch that started on the toolbar can finish after candidates replace it.
             // ViewAnimator keeps that touch target even when its child becomes GONE.
             if (barStateMachine.currentState != QuickBarStateMachine.State.Always) return@AlwaysUi
-            if (action.isNotEmpty()) {
-                commonKeyboardActionListener.listener.onAction(theme.resolveAction(action))
-            } else {
-                windowManager.attachWindow(SwitchOptionWindow(di))
+            when (action) {
+                "CherryTranslate" -> service.toggleTranslation()
+                "CherryEdit" -> keyboardWindow.toggleTextSelector()
+                "" -> windowManager.attachWindow(SwitchOptionWindow(di))
+                else -> commonKeyboardActionListener.listener.onAction(theme.resolveAction(action))
             }
         }.apply {
             hideKeyboardButton.apply {

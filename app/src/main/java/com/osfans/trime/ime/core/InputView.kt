@@ -36,6 +36,7 @@ import com.osfans.trime.ime.keyboard.KeyboardPrefs.isLandscapeMode
 import com.osfans.trime.ime.keyboard.KeyboardWindow
 import com.osfans.trime.ime.popup.PopupDelegate
 import com.osfans.trime.ime.symbol.LiquidWindow
+import com.osfans.trime.ime.translation.InlineTranslationPanel
 import com.osfans.trime.ime.window.BoardWindowManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -163,6 +164,8 @@ class InputView(
             return dp(value)
         }
 
+    internal val translationPanel = InlineTranslationPanel(themedContext, service::closeTranslation, service::insertTranslation)
+
     val keyboardView: View
 
     /** Restyles colors after a scheme switch without rebuilding the view tree. */
@@ -197,9 +200,16 @@ class InputView(
                     },
                 )
                 add(
+                    translationPanel,
+                    lParams(matchParent, dp(43)) {
+                        topOfParent()
+                        centerHorizontally()
+                    },
+                )
+                add(
                     inputBar.view,
                     lParams(matchParent, dp(inputBar.themedHeight)) {
-                        topOfParent()
+                        below(translationPanel)
                         centerHorizontally()
                     },
                 )
@@ -377,6 +387,7 @@ class InputView(
     fun handleInlineSuggestions(response: InlineSuggestionsResponse): Boolean = inputBar.handleInlineSuggestions(response)
 
     override fun onDetachedFromWindow() {
+        translationPanel.close()
         ViewCompat.setOnApplyWindowInsetsListener(this, null)
         // cancel the notification job and clear all broadcast receivers,
         // implies that InputView should not be attached again after detached.

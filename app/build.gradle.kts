@@ -42,6 +42,7 @@ android {
     }
 
     buildFeatures {
+        aidl = true
         buildConfig = true
         viewBinding = true
         resValues = true

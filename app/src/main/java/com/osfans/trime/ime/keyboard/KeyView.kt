@@ -128,14 +128,14 @@ class KeyView(
             showPopupPreview(direction)
         }
 
-        onSlide = { delta, _, _ ->
+        onSlide = slide@{ delta, _, _ ->
             if (isSlideCursor) {
                 when {
                     delta > 0 -> keyboardActionListener.onAction(theme.resolveAction("Right"))
                     delta < 0 -> keyboardActionListener.onAction(theme.resolveAction("Left"))
                 }
             } else if (isSlideDelete) {
-                val ic = service.currentInputConnection
+                val ic = service.currentInputConnection ?: return@slide
                 when {
                     delta < 0 -> {
                         val beforeText = ic.getTextBeforeCursor(1, 0) ?: ""

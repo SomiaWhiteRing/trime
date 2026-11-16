@@ -118,6 +118,8 @@ object ClipboardHelper :
 
     fun allBeans() = clbDao.allBeans()
 
+    fun observeItemCount() = clbDao.observeItemCount()
+
     suspend fun pin(id: Int) = clbDao.updatePinned(id, true)
 
     suspend fun unpin(id: Int) = clbDao.updatePinned(id, false)

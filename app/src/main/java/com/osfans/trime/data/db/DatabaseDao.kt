@@ -11,6 +11,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DatabaseDao {
@@ -79,4 +80,7 @@ interface DatabaseDao {
 
     @Query("SELECT COUNT(*) FROM ${DatabaseBean.TABLE_NAME}")
     suspend fun itemCount(): Int
+
+    @Query("SELECT COUNT(*) FROM ${DatabaseBean.TABLE_NAME}")
+    fun observeItemCount(): Flow<Int>
 }
