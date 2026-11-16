@@ -639,11 +639,11 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         InputFeedbackManager.finishInput()
     }
 
-    fun commitText(text: String) {
-        val ic = currentInputConnection ?: return
+    fun commitText(text: String): Boolean {
+        val ic = currentInputConnection ?: return false
 
         // when composing text equals commit content, finish composing text as-is
-        if (composingText.isNotEmpty() && composingText == text) {
+        val committed = if (composingText.isNotEmpty() && composingText == text) {
             ic.finishComposingText()
         } else {
             ic.commitText(text, 1)
@@ -651,6 +651,7 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         lastCommittedText = text
         composingText = ""
         InputFeedbackManager.textCommitSpeak(text)
+        return committed
     }
 
     /**

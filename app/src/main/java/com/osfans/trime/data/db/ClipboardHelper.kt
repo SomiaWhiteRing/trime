@@ -124,6 +124,8 @@ object ClipboardHelper :
 
     suspend fun unpin(id: Int) = clbDao.updatePinned(id, false)
 
+    suspend fun moveToTop(id: Int) = clbDao.updateTime(id, System.currentTimeMillis())
+
     suspend fun updateText(
         id: Int,
         text: String,

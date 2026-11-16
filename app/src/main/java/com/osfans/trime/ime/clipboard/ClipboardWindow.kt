@@ -111,7 +111,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         object : ClipboardAdapter(scope) {
             override fun onPaste(bean: DatabaseBean) {
                 val text = bean.text ?: return
-                service.commitText(text)
+                val committed = service.commitText(text)
+                if (committed && usesCherryLayout && prefs.cherryClipboardMoveToTopAfterPaste.getValue()) {
+                    service.lifecycleScope.launch { ClipboardHelper.moveToTop(bean.id) }
+                }
                 if (clipboardReturnAfterPaste) {
                     windowManager.attachWindow(KeyboardWindow)
                 }
@@ -300,6 +303,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             val rows = listOf(
                 "启用剪贴板" to prefs.clipboardListening,
                 "候选条展示复制内容" to prefs.clipboardSuggestion,
+                "使用后移至最前" to prefs.cherryClipboardMoveToTopAfterPaste,
             )
             val controls = rows.map { (label, preference) ->
                 SwitchCompat(context).apply {

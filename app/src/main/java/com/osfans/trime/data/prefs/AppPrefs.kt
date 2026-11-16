@@ -396,6 +396,7 @@ class AppPrefs(
             const val CLIPBOARD_RETURN_AFTER_PASTE = "clipboard_return_after_paste"
         }
         val clipboardListening = switch(R.string.clipboard_listening, CLIPBOARD_LISTENING, true)
+        val cherryClipboardMoveToTopAfterPaste = bool("cherry_clipboard_move_to_top_after_paste", false)
         val clipboardLimit = int(
             R.string.clipboard_limit,
             CLIPBOARD_LIMIT,
