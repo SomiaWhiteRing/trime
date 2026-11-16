@@ -10,6 +10,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.content.res.ColorStateList
+import android.os.Build
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -725,17 +726,24 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         if (usesCherryLayout) {
             tabUi.root.minimumWidth = context.dp(if (position == 2) 42 else 56)
             tabUi.root.minimumHeight = context.dp(35)
+            val isVivo = Build.BRAND.equals("vivo", ignoreCase = true)
             tabUi.activeStyle = { active ->
-                tabUi.label.setTypeface(theme.fonts.candidate, if (active) Typeface.BOLD else Typeface.NORMAL)
-                tabUi.label.scaleX = if (active) 0.98f else 0.975f
-                tabUi.label.scaleY = if (active) 1f else 0.975f
+                val bold = active && !isVivo
+                tabUi.label.setTypeface(theme.fonts.candidate, if (bold) Typeface.BOLD else Typeface.NORMAL)
+                tabUi.label.scaleX = if (bold) 0.98f else 0.975f
+                tabUi.label.scaleY = if (bold) 1f else 0.975f
                 tabUi.label.translationX = when (position) {
-                    0 -> context.dp(if (active) 0.6f else 1f / 3)
+                    0 -> context.dp(if (bold) 0.6f else 1f / 3)
                     1 -> context.dp(1f / 6)
                     else -> 0f
                 }
-                tabUi.label.translationY = context.dp(if (active) 2f / 3 else 0.625f)
-                tabUi.label.setTextColor(if (active) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt())
+                val baselineOffset = if (isVivo) -1f / 24 else if (bold) 2f / 3 else 0.625f
+                tabUi.label.translationY = context.dp(baselineOffset)
+                tabUi.label.setTextColor(when {
+                    !active -> 0xFFB3B3B3.toInt()
+                    isVivo -> 0xFFA21E42.toInt()
+                    else -> 0xFF9D1E42.toInt()
+                })
                 tabUi.root.background = if (active) {
                     val contourOffset = when (position) {
                         1 -> context.dp(-1f / 3)
