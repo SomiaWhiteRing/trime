@@ -6,7 +6,9 @@
 package com.osfans.trime.ime.clipboard
 
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -123,6 +125,17 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 }
                 if (clipboardReturnAfterPaste) {
                     windowManager.attachWindow(KeyboardWindow)
+                }
+            }
+
+            override fun onSearch(bean: DatabaseBean) {
+                val text = bean.text ?: return
+                val url = Uri.parse("https://m.baidu.com/s").buildUpon().appendQueryParameter("word", text).build()
+                val intent = Intent(Intent.ACTION_VIEW, url).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    service.startActivity(intent)
+                } catch (_: ActivityNotFoundException) {
+                    // Search requires a browser.
                 }
             }
 
