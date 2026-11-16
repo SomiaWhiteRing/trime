@@ -28,16 +28,36 @@ def read_english_dictionary(apk):
 def write_profile(apk, directory):
     trie, offsets, records = read_english_dictionary(apk)
     directory.mkdir(parents=True, exist_ok=True)
-    count = 0
+    entries = {}
+    word_pattern = re.compile(r"[A-Za-z]+(?:['-][A-Za-z]+)*")
+    for word in trie:
+        if not word_pattern.fullmatch(word):
+            continue
+        key = word.lower().replace("'", "").replace("-", "")
+        index = trie[word]
+        start, end = offsets[index:index + 2]
+        if word == key:
+            # The original candidate strip keeps the typed spelling first.
+            entries[(word, key)] = end - start + 1
+        cursor = start
+        while cursor < end:
+            # Keep the stored order of records for this lookup key.
+            weight = end - cursor
+            flags = records[cursor]
+            cursor += 4
+            candidate = word
+            if (flags & 0x03) == 0x03 or (flags & 0x0C) == 0x0C:
+                size = records[cursor]
+                cursor += 1
+                candidate = records[cursor:cursor + size].decode("utf-8")
+                cursor += size
+            if word_pattern.fullmatch(candidate):
+                entry = (candidate, key)
+                entries[entry] = max(entries.get(entry, 0), weight)
     with (directory / "cherry_english.dict.yaml").open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write("---\nname: cherry_english\nversion: '1'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
-        for word in trie:
-            if not re.fullmatch(r"[A-Za-z]+(?:'[A-Za-z]+)*", word):
-                continue
-            key = word.lower().replace("'", "")
-            if key:
-                stream.write(f"{word}\t{key}\t1\n")
-                count += 1
+        stream.write("---\nname: cherry_english\nversion: '2'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
+        for (candidate, key), weight in entries.items():
+            stream.write(f"{candidate}\t{key}\t{weight}\n")
 
     (directory / "cherry_english.schema.yaml").write_text(
         r"""schema:
@@ -79,7 +99,7 @@ key_binder:
         if "cherry_english" not in dependencies:
             dependencies.append("cherry_english")
         pinyin_patch.write_text(yaml.safe_dump(config, allow_unicode=True, sort_keys=False), encoding="utf-8")
-    return (len(trie), len(offsets), len(records), count)
+    return (len(trie), len(offsets), len(records), len(entries))
 
 
 def configure_keyboard(theme_path):
@@ -133,4 +153,4 @@ if __name__ == "__main__":
     entries, offsets, records, words = write_profile(args.apk, args.profile)
     if args.candidate_reference:
         import_candidate_arrow(args.candidate_reference, args.profile)
-    print(f"{entries} entries, {offsets} offsets, {records} record bytes, {words} standalone English words")
+    print(f"{entries} entries, {offsets} offsets, {records} record bytes, {words} English candidate mappings")
