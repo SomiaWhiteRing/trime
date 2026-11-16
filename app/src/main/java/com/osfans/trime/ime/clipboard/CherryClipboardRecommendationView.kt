@@ -30,6 +30,7 @@ internal class CherryClipboardRecommendationView(
     initialMode: CherrySendMode,
     private val stage: (String) -> Boolean,
     private val send: () -> Boolean,
+    private val revoke: (String) -> Boolean,
     private val paste: (String) -> Unit,
 ) : LinearLayout(context) {
     data class Group(val title: String, val phrases: List<String>)
@@ -54,12 +55,13 @@ internal class CherryClipboardRecommendationView(
     private var selected = 0
     private var expanded = -1
     private var sequenceIndex = 0
-    private var staged = false
+    private var stagedPhrase: String? = null
+    private val singleSendArtwork = scope.drawable("clipboard-recommend-send-plane.png")
+    private val stagedSendArtwork = scope.drawable("clipboard-recommend-staged-plane.png")
     private val sendButton = FrameLayout(context).apply {
         contentDescription = context.getString(R.string.cherry_send_action)
-        val artwork = scope.drawable("clipboard-recommend-send-plane.png")
-        if (artwork != null) {
-            background = artwork
+        if (singleSendArtwork != null) {
+            background = singleSendArtwork
         } else {
             background = GradientDrawable().apply {
                 setColor(0xFFFFFFFF.toInt())
@@ -74,6 +76,29 @@ internal class CherryClipboardRecommendationView(
         }
         setOnClickListener { sendNext() }
     }
+    private val revokeButton = TextView(context).apply {
+        val artwork = scope.drawable("clipboard-recommend-revoke.png")
+        if (artwork == null) {
+            text = "↶"
+            textSize = 24f
+            gravity = Gravity.CENTER
+            setTextColor(0xFF363636.toInt())
+            background = GradientDrawable().apply {
+                setColor(0xFFFFFFFF.toInt())
+                cornerRadius = dp(20f)
+            }
+        } else {
+            background = artwork
+        }
+        contentDescription = context.getString(R.string.cherry_send_revoke)
+        setOnClickListener {
+            val phrase = stagedPhrase ?: return@setOnClickListener
+            if (revoke(phrase)) {
+                stagedPhrase = null
+                updateSendControls()
+            }
+        }
+    }
 
     init {
         orientation = VERTICAL
@@ -83,6 +108,10 @@ internal class CherryClipboardRecommendationView(
             addView(cardsScroll, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
             addView(sendButton, FrameLayout.LayoutParams(dp(55), dp(40), Gravity.END or Gravity.BOTTOM).apply {
                 bottomMargin = dp(29)
+            })
+            addView(revokeButton, FrameLayout.LayoutParams(dp(44), dp(40), Gravity.END or Gravity.BOTTOM).apply {
+                bottomMargin = dp(29)
+                marginEnd = dp(55)
             })
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         renderTabs()
@@ -94,7 +123,7 @@ internal class CherryClipboardRecommendationView(
         mode = next
         expanded = -1
         sequenceIndex = 0
-        staged = false
+        stagedPhrase = null
         renderCards()
         cardsScroll.scrollTo(0, 0)
     }
@@ -128,7 +157,7 @@ internal class CherryClipboardRecommendationView(
                     selected = index
                     expanded = -1
                     sequenceIndex = 0
-                    staged = false
+                    stagedPhrase = null
                     renderTabs()
                     renderCards()
                     cardsScroll.scrollTo(0, 0)
@@ -147,9 +176,7 @@ internal class CherryClipboardRecommendationView(
     private fun renderCards() {
         cards.removeAllViews()
         val category = categories[selected]
-        sendButton.visibility = if (mode == CherrySendMode.SEQUENTIAL && sequenceIndex in category.phrases.indices) {
-            View.VISIBLE
-        } else View.GONE
+        updateSendControls()
         if (mode == CherrySendMode.RANDOM) {
             renderRandomGroups(category.groups)
             return
@@ -180,7 +207,7 @@ internal class CherryClipboardRecommendationView(
                             paste(phrase)
                         } else if (stage(phrase)) {
                             sequenceIndex = index
-                            staged = true
+                            stagedPhrase = phrase
                             redrawAtCurrentScroll()
                         }
                     }
@@ -226,11 +253,26 @@ internal class CherryClipboardRecommendationView(
         }
     }
 
+    private fun updateSendControls() {
+        val show = mode == CherrySendMode.SEQUENTIAL && sequenceIndex in categories[selected].phrases.indices
+        sendButton.visibility = if (show) View.VISIBLE else View.GONE
+        revokeButton.visibility = if (show && stagedPhrase != null) View.VISIBLE else View.GONE
+        if (singleSendArtwork != null) {
+            sendButton.background = if (stagedPhrase == null) singleSendArtwork else stagedSendArtwork ?: singleSendArtwork
+        }
+    }
+
     private fun sendNext() {
         val phrase = categories[selected].phrases.getOrNull(sequenceIndex) ?: return
-        if (!staged) staged = stage(phrase)
-        if (!staged || !send()) return
-        staged = false
+        if (stagedPhrase == null) {
+            if (!stage(phrase)) return
+            stagedPhrase = phrase
+        }
+        if (!send()) {
+            updateSendControls()
+            return
+        }
+        stagedPhrase = null
         sequenceIndex++
         redrawAtCurrentScroll()
         cardsScroll.post {

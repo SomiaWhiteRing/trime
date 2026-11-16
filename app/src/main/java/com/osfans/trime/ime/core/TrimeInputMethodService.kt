@@ -371,6 +371,12 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         commitText(text)
     }
 
+    internal fun revokeStagedRecommendation(phrase: String): Boolean {
+        val editor = currentInputConnection ?: return false
+        if (!editor.getTextBeforeCursor(phrase.length, 0).contentEquals(phrase)) return false
+        return editor.deleteSurroundingText(phrase.length, 0)
+    }
+
     internal fun sendRecommendationInCurrentEditor(): Boolean {
         val options = currentInputEditorInfo?.imeOptions ?: return false
         return options and EditorInfo.IME_MASK_ACTION == EditorInfo.IME_ACTION_SEND &&

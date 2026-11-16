@@ -43,4 +43,5 @@
     <string name="cherry_send_sequential_label">顺序发送</string>
     <string name="cherry_send_sequential_detail">按顺序依次连发内容</string>
     <string name="cherry_send_action">发送</string>
+    <string name="cherry_send_revoke">撤回</string>
 </resources>

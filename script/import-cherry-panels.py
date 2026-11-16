@@ -37,6 +37,8 @@ parser.add_argument("--clipboard-send-random", nargs=2, metavar=("SCROLLED_PANEL
                     help="Native selected random row in the scrolled mode panel, and its 1116 x 87 footer")
 parser.add_argument("--clipboard-send-sequential", nargs=4, metavar=("IDLE_PANEL", "ACTIVE_PANEL", "BODY", "FOOTER"),
                     help="Native sequential selector rows, recommendation body and footer captures")
+parser.add_argument("--clipboard-send-revoke", type=Path,
+                    help="1116 x 702 CHERRY recommendation body with the staged Undo and Send controls")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -189,6 +191,17 @@ if args.clipboard_send_random:
 
 
 
+def recommendation_capsule(body, start):
+    plane = body.crop((start, 408, 1116, 528)).convert("RGBA")
+    for y in range(plane.height):
+        left = next(x for x in range(plane.width) if min(plane.getpixel((x, y))[:3]) >= 220)
+        for x in range(left):
+            gray = plane.getpixel((x, y))[0]
+            alpha = max(0, round((gray - 67) * 255 / 188)) if x >= left - 2 else 0
+            plane.putpixel((x, y), (255, 255, 255, alpha))
+    return plane
+
+
 if args.clipboard_send_sequential:
     idle, active, body, footer = [Image.open(path).convert("RGB") for path in args.clipboard_send_sequential]
     if any(im.size != (1116, 826) for im in (idle, active)) or body.size != (1116, 702) or footer.size != (1116, 87):
@@ -196,14 +209,15 @@ if args.clipboard_send_sequential:
     for name, panel in (("idle", idle), ("active", active)):
         panel.crop((0, 591, 1116, 802)).save(assets / f"clipboard-send-mode-sequential-{name}.png")
     footer.crop((615, 0, 783, 87)).save(assets / "clipboard-recommend-send-sequential.png")
-    plane = body.crop((951, 408, 1116, 528)).convert("RGBA")
-    for y in range(plane.height):
-        left = next(x for x in range(plane.width) if min(plane.getpixel((x, y))[:3]) >= 220)
-        for x in range(left):
-            gray = plane.getpixel((x, y))[0]
-            alpha = max(0, round((gray - 67) * 255 / 188)) if x >= left - 2 else 0
-            plane.putpixel((x, y), (255, 255, 255, alpha))
-    plane.save(assets / "clipboard-recommend-send-plane.png")
+    recommendation_capsule(body, 951).save(assets / "clipboard-recommend-send-plane.png")
+
+if args.clipboard_send_revoke:
+    body = Image.open(args.clipboard_send_revoke).convert("RGB")
+    if body.size != (1116, 702):
+        raise ValueError("Expected staged CHERRY recommendation body at 1116 x 702")
+    controls = recommendation_capsule(body, 819)
+    controls.crop((0, 0, 132, 120)).save(assets / "clipboard-recommend-revoke.png")
+    controls.crop((132, 0, 297, 120)).save(assets / "clipboard-recommend-staged-plane.png")
 
 
 def resource(file):
