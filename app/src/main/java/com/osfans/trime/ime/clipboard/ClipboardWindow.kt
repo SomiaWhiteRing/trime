@@ -246,12 +246,13 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     val index = displayedPhrases.indexOfFirst { it.id == bean.id }
                     if (index < 0) return
                     undoStagedPhrase = service.stageRecommendation(text) ?: return
+                    rememberPhrase(bean.id)
                     phraseSequenceIndex = index
                     updatePhraseSequence()
                     return
                 }
                 if (service.commitText(text) && usesCherryLayout) {
-                    rememberPhrase(bean)
+                    rememberPhrase(bean.id)
                     if (recommendationSendMode == CherrySendMode.AUTOMATIC) {
                         service.sendRecommendationInCurrentEditor()
                     }
@@ -747,8 +748,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    private fun rememberPhrase(bean: DatabaseBean) {
-        val ids = (listOf(bean.id) + recentPhraseIds.value.filterNot { it == bean.id }).take(300)
+    private fun rememberRecommendation(text: String) {
+        service.lifecycleScope.launch {
+            rememberPhrase(CollectionHelper.recordRecent(text))
+        }
+    }
+
+    private fun rememberPhrase(id: Int) {
+        val ids = (listOf(id) + recentPhraseIds.value.filterNot { it == id }).take(300)
         if (ids != recentPhraseIds.value) {
             recentPhraseIds.value = ids
             recentPhrasePrefs.edit().putString("ids", ids.joinToString(",")).apply()
@@ -795,7 +802,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                                 val bean = phrases.random()
                                 val text = bean.text ?: return@setOnClickListener
                                 if (service.commitText(text)) {
-                                    rememberPhrase(bean)
+                                    rememberPhrase(bean.id)
                                     service.sendRecommendationInCurrentEditor()
                                     if (clipboardReturnAfterPaste) windowManager.attachWindow(KeyboardWindow)
                                 }
@@ -840,14 +847,16 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private fun sendNextPhrase() {
         val bean = displayedPhrases.getOrNull(phraseSequenceIndex) ?: return
         val text = bean.text ?: return
-        if (undoStagedPhrase == null) undoStagedPhrase = service.stageRecommendation(text) ?: return
+        if (undoStagedPhrase == null) {
+            undoStagedPhrase = service.stageRecommendation(text) ?: return
+            rememberPhrase(bean.id)
+        }
         if (!service.sendRecommendationInCurrentEditor()) {
             updatePhraseSequence()
             return
         }
         undoStagedPhrase = null
         val next = displayedPhrases.getOrNull(phraseSequenceIndex + 1) ?: displayedPhrases.first()
-        rememberPhrase(bean)
         phraseSequenceIndex = displayedPhrases.indexOfFirst { it.id == next.id }
         updatePhraseSequence()
         collectionPage.recyclerView.smoothScrollToPosition(phraseSequenceIndex)
@@ -966,10 +975,13 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         scope,
                         recommendations,
                         recommendationSendMode,
-                        stage = service::stageRecommendation,
+                        stage = { phrase ->
+                            service.stageRecommendation(phrase)?.also { rememberRecommendation(phrase) }
+                        },
                         send = service::sendRecommendationInCurrentEditor,
                     ) { phrase ->
                         if (service.commitText(phrase)) {
+                            rememberRecommendation(phrase)
                             if (recommendationSendMode != CherrySendMode.MANUAL && !clipboardReturnAfterPaste) {
                                 service.sendRecommendationInCurrentEditor()
                             }
@@ -1181,7 +1193,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     val currentId = displayedPhrases.getOrNull(phraseSequenceIndex)?.id
                     val byId = records.associateBy { it.id }
                     phraseGroups = mapOf(
-                        PhraseFilter.DEFAULT to records,
+                        PhraseFilter.DEFAULT to records.filterNot { it.recentOnly },
                         PhraseFilter.FAVORITES to records.filter { it.pinned },
                         PhraseFilter.RECENT to ids.mapNotNull(byId::get),
                     )

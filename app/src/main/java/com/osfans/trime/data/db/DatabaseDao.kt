@@ -72,6 +72,9 @@ interface DatabaseDao {
     @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} ORDER BY pinned DESC, time DESC")
     fun allBeans(): PagingSource<Int, DatabaseBean>
 
+    @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} WHERE NOT recent_only OR pinned ORDER BY pinned DESC, time DESC")
+    fun savedCollectionBeans(): PagingSource<Int, DatabaseBean>
+
     @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} ORDER BY pinned DESC, time DESC")
     fun observeCollectionRecords(): Flow<List<DatabaseBean>>
 

@@ -28,7 +28,7 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
         cltDb =
             Room
                 .databaseBuilder(context, Database::class.java, "collection.db")
-                .addMigrations(Database.MIGRATION_3_4)
+                .addMigrations(Database.MIGRATION_3_4, Database.MIGRATION_4_5)
                 .build()
         cltDao = cltDb.databaseDao()
     }
@@ -39,7 +39,7 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
 
     suspend fun haveUnpinned() = cltDao.haveUnpinned()
 
-    fun allBeans() = cltDao.allBeans()
+    fun allBeans() = cltDao.savedCollectionBeans()
     fun observeRecords() = cltDao.observeCollectionRecords()
 
     suspend fun pin(id: Int) = cltDao.updatePinned(id, true)
@@ -66,6 +66,10 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
         cltDao.updateText(id, text)
     }
 
+    suspend fun recordRecent(text: String): Int = mutex.withLock {
+        cltDao.find(text)?.id ?: cltDao.insert(DatabaseBean(text = text, recentOnly = true)).toInt()
+    }
+
     fun addNewBean(text: String) {
         launch {
             mutex.withLock {
@@ -73,8 +77,9 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
                 if (bean.text.isNullOrBlank()) return@withLock
                 try {
                     cltDao.find(text)?.let {
-                        lastBean = it.copy(time = bean.time)
-                        cltDao.updateTime(it.id, bean.time)
+                        val saved = it.copy(time = bean.time, recentOnly = false)
+                        lastBean = saved
+                        cltDao.update(saved)
                         return@withLock
                     }
                     val insertedBean = cltDb.withTransaction {

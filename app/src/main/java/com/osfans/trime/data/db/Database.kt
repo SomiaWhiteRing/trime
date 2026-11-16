@@ -10,12 +10,18 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [DatabaseBean::class], version = 4)
+@Database(entities = [DatabaseBean::class], version = 5)
 @TypeConverters(DatabaseBean.Converters::class)
 abstract class Database : RoomDatabase() {
     abstract fun databaseDao(): DatabaseDao
 
     companion object {
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE ${DatabaseBean.TABLE_NAME} ADD COLUMN recent_only INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         val MIGRATION_3_4 =
             object : Migration(3, 4) {
                 override fun migrate(db: SupportSQLiteDatabase) {

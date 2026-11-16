@@ -7,6 +7,7 @@ package com.osfans.trime.data.db
 import android.content.ClipData
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
@@ -20,6 +21,8 @@ data class DatabaseBean(
     val type: BeanType = BeanType.TEXT,
     val time: Long = System.currentTimeMillis(),
     val pinned: Boolean = false,
+    @ColumnInfo(name = "recent_only", defaultValue = "0")
+    val recentOnly: Boolean = false,
 ) {
     companion object {
         const val TABLE_NAME = "t_data"
