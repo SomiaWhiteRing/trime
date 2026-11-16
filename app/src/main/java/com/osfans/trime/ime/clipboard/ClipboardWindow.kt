@@ -718,9 +718,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         scope,
                         recommendations,
                         recommendationSendMode,
-                        stage = service::commitText,
+                        stage = service::stageRecommendation,
                         send = service::sendRecommendationInCurrentEditor,
-                        revoke = service::revokeStagedRecommendation,
                     ) { phrase ->
                         if (service.commitText(phrase)) {
                             if (recommendationSendMode != CherrySendMode.MANUAL && !clipboardReturnAfterPaste) {

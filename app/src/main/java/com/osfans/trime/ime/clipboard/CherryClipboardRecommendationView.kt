@@ -28,9 +28,8 @@ internal class CherryClipboardRecommendationView(
     private val scope: ThemeScope,
     private val categories: List<Category>,
     initialMode: CherrySendMode,
-    private val stage: (String) -> Boolean,
+    private val stage: (String) -> (() -> Boolean)?,
     private val send: () -> Boolean,
-    private val revoke: (String) -> Boolean,
     private val paste: (String) -> Unit,
 ) : LinearLayout(context) {
     data class Group(val title: String, val phrases: List<String>)
@@ -55,7 +54,7 @@ internal class CherryClipboardRecommendationView(
     private var selected = 0
     private var expanded = -1
     private var sequenceIndex = 0
-    private var stagedPhrase: String? = null
+    private var undoStagedPhrase: (() -> Boolean)? = null
     private val singleSendArtwork = scope.drawable("clipboard-recommend-send-plane.png")
     private val stagedSendArtwork = scope.drawable("clipboard-recommend-staged-plane.png")
     private val sendButton = FrameLayout(context).apply {
@@ -92,9 +91,9 @@ internal class CherryClipboardRecommendationView(
         }
         contentDescription = context.getString(R.string.cherry_send_revoke)
         setOnClickListener {
-            val phrase = stagedPhrase ?: return@setOnClickListener
-            if (revoke(phrase)) {
-                stagedPhrase = null
+            val undo = undoStagedPhrase ?: return@setOnClickListener
+            if (undo()) {
+                undoStagedPhrase = null
                 updateSendControls()
             }
         }
@@ -123,7 +122,7 @@ internal class CherryClipboardRecommendationView(
         mode = next
         expanded = -1
         sequenceIndex = 0
-        stagedPhrase = null
+        undoStagedPhrase = null
         renderCards()
         cardsScroll.scrollTo(0, 0)
     }
@@ -157,7 +156,7 @@ internal class CherryClipboardRecommendationView(
                     selected = index
                     expanded = -1
                     sequenceIndex = 0
-                    stagedPhrase = null
+                    undoStagedPhrase = null
                     renderTabs()
                     renderCards()
                     cardsScroll.scrollTo(0, 0)
@@ -205,9 +204,10 @@ internal class CherryClipboardRecommendationView(
                     setOnClickListener {
                         if (mode != CherrySendMode.SEQUENTIAL) {
                             paste(phrase)
-                        } else if (stage(phrase)) {
+                        } else {
+                            val undo = stage(phrase) ?: return@setOnClickListener
                             sequenceIndex = index
-                            stagedPhrase = phrase
+                            undoStagedPhrase = undo
                             redrawAtCurrentScroll()
                         }
                     }
@@ -256,23 +256,22 @@ internal class CherryClipboardRecommendationView(
     private fun updateSendControls() {
         val show = mode == CherrySendMode.SEQUENTIAL && sequenceIndex in categories[selected].phrases.indices
         sendButton.visibility = if (show) View.VISIBLE else View.GONE
-        revokeButton.visibility = if (show && stagedPhrase != null) View.VISIBLE else View.GONE
+        revokeButton.visibility = if (show && undoStagedPhrase != null) View.VISIBLE else View.GONE
         if (singleSendArtwork != null) {
-            sendButton.background = if (stagedPhrase == null) singleSendArtwork else stagedSendArtwork ?: singleSendArtwork
+            sendButton.background = if (undoStagedPhrase == null) singleSendArtwork else stagedSendArtwork ?: singleSendArtwork
         }
     }
 
     private fun sendNext() {
         val phrase = categories[selected].phrases.getOrNull(sequenceIndex) ?: return
-        if (stagedPhrase == null) {
-            if (!stage(phrase)) return
-            stagedPhrase = phrase
+        if (undoStagedPhrase == null) {
+            undoStagedPhrase = stage(phrase) ?: return
         }
         if (!send()) {
             updateSendControls()
             return
         }
-        stagedPhrase = null
+        undoStagedPhrase = null
         sequenceIndex++
         redrawAtCurrentScroll()
         cardsScroll.post {

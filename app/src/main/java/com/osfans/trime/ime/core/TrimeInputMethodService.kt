@@ -371,10 +371,44 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         commitText(text)
     }
 
-    internal fun revokeStagedRecommendation(phrase: String): Boolean {
-        val editor = currentInputConnection ?: return false
-        if (!editor.getTextBeforeCursor(phrase.length, 0).contentEquals(phrase)) return false
-        return editor.deleteSurroundingText(phrase.length, 0)
+    internal fun stageRecommendation(phrase: String): (() -> Boolean)? {
+        val editor = currentInputConnection ?: return null
+        if (!commitText(phrase)) return null
+
+        val request = ExtractedTextRequest()
+        val after = editor.getExtractedText(request, 0)
+        val end = after?.selectionEnd ?: -1
+        val start = end - phrase.length
+        val prefix = after?.takeIf {
+            it.startOffset == 0 && it.selectionStart == end &&
+                start >= 0 && end <= it.text.length && it.text.subSequence(start, end).contentEquals(phrase)
+        }?.text?.subSequence(0, start)?.toString()
+
+        return undo@{
+            if (currentInputConnection !== editor) return@undo false
+            if (prefix == null) {
+                return@undo editor.getTextBeforeCursor(phrase.length, 0).contentEquals(phrase) &&
+                    editor.deleteSurroundingText(phrase.length, 0)
+            }
+
+            val current = editor.getExtractedText(request, 0) ?: return@undo false
+            val text = current.text.toString()
+            if (current.startOffset != 0 || !text.startsWith(prefix) || !text.startsWith(phrase, start) ||
+                current.selectionStart !in 0..text.length || current.selectionEnd !in 0..text.length
+            ) return@undo false
+            if (current.selectionStart == end && current.selectionEnd == end) {
+                return@undo editor.deleteSurroundingText(phrase.length, 0)
+            }
+
+            editor.beginBatchEdit()
+            val removed = editor.setSelection(start, end) &&
+                editor.getSelectedText(0).contentEquals(phrase) &&
+                editor.commitText("", 1)
+            fun adjust(offset: Int) = if (removed) offset - (offset - start).coerceIn(0, phrase.length) else offset
+            editor.setSelection(adjust(current.selectionStart), adjust(current.selectionEnd))
+            editor.endBatchEdit()
+            removed
+        }
     }
 
     internal fun sendRecommendationInCurrentEditor(): Boolean {
