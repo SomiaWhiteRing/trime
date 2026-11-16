@@ -75,9 +75,23 @@ internal class CherryNumberWindow(
         cell(hitTarget(context, "0") { service.commitText("0") }.apply {
             setOnLongClickListener { key("VOICE_ASSIST"); true }
         }.withNumericPress("0"), 430, 527, 220, 175)
-        cell(hitTarget(context, "符号") {
-            manager.attachWindow(CherrySymbolsWindow(di, catalog) { manager.attachWindow(this@CherryNumberWindow) })
-        }.withNumericPress("symbols"), 660, 527, 220, 175)
+        val symbols = View(context).apply {
+            contentDescription = "符号"
+            setOnClickListener {
+                isPressed = false
+                // CHERRY releases the numeric key in a separate frame before opening the symbol grid.
+                postOnAnimation {
+                    post {
+                        if (isAttachedToWindow) {
+                            manager.attachWindow(CherrySymbolsWindow(di, catalog) {
+                                manager.attachWindow(this@CherryNumberWindow)
+                            })
+                        }
+                    }
+                }
+            }
+        }.withNumericPress("symbols")
+        cell(symbols, 660, 527, 220, 175)
         val backspace = cherryBackspace(context) { key("BackSpace") }.withNumericPress("backspace")
         cell(backspace, 890, 2, 226, 175)
         val enter = label(context, enterKey.keyLabel, 14f) { key("Return") }.apply {
