@@ -29,20 +29,22 @@ def write_profile(apk, directory):
     trie, offsets, records = read_english_dictionary(apk)
     directory.mkdir(parents=True, exist_ok=True)
     entries = {}
+    lexical_weights = {}
+    key_weights = {}
     word_pattern = re.compile(r"[A-Za-z]+(?:['-][A-Za-z]+)*")
+    cost_scale = max(end - start for start, end in zip(offsets, offsets[1:])) + 1
     for word in trie:
         if not word_pattern.fullmatch(word):
             continue
         key = word.lower().replace("'", "").replace("-", "")
         index = trie[word]
         start, end = offsets[index:index + 2]
-        if word == key:
-            # The original candidate strip keeps the typed spelling first.
-            entries[(word, key)] = end - start + 1
+        best_weight = 0
         cursor = start
         while cursor < end:
-            # Keep the stored order of records for this lookup key.
-            weight = end - cursor
+            # Lower costs rank first. Use record order to break ties.
+            weight = (256 - records[cursor + 3]) * cost_scale + (end - cursor)
+            best_weight = max(best_weight, weight)
             flags = records[cursor]
             cursor += 4
             candidate = word
@@ -54,8 +56,20 @@ def write_profile(apk, directory):
             if word_pattern.fullmatch(candidate):
                 entry = (candidate, key)
                 entries[entry] = max(entries.get(entry, 0), weight)
+                if candidate.lower().replace("'", "").replace("-", "") == key:
+                    lexical_weights[entry] = max(lexical_weights.get(entry, 0), weight)
+        key_weights[key] = max(key_weights.get(key, 0), best_weight)
+    for (candidate, key), weight in lexical_weights.items():
+        for length in range(1, len(key)):
+            prefix = key[:length]
+            # Put completions under the same code so Rime orders them by cost.
+            entries.setdefault((candidate, prefix), weight)
+            key_weights[prefix] = max(key_weights.get(prefix, 0), weight)
+    for key, weight in key_weights.items():
+        # Leave the literal input at the head of its candidate list.
+        entries[(key, key)] = weight + 1
     with (directory / "cherry_english.dict.yaml").open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write("---\nname: cherry_english\nversion: '2'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
+        stream.write("---\nname: cherry_english\nversion: '3'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
         for (candidate, key), weight in entries.items():
             stream.write(f"{candidate}\t{key}\t{weight}\n")
 
