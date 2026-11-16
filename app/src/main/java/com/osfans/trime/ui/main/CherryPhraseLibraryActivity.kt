@@ -23,22 +23,18 @@ import android.widget.TextView
 import androidx.core.widget.doAfterTextChanged
 import com.osfans.trime.R
 import com.osfans.trime.core.data.DataManager
+import com.osfans.trime.data.db.CherryPhraseGroups
 import com.osfans.trime.data.db.CollectionHelper
 import com.osfans.trime.data.db.DatabaseBean
 import com.osfans.trime.util.AppUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 import splitties.dimensions.dp
 
 class CherryPhraseLibraryActivity : Activity() {
     private val scope = MainScope()
-    private val prefs by lazy { getSharedPreferences("cherry_phrase_library", MODE_PRIVATE) }
-    private val groups by lazy {
-        val stored = JSONArray(prefs.getString("groups", "[]") ?: "[]")
-        MutableList(stored.length(), stored::getString)
-    }
+    private val groups by lazy { CherryPhraseGroups.names(this).toMutableList() }
     private lateinit var tabs: LinearLayout
     private lateinit var rows: LinearLayout
     private var selected = 1
@@ -214,7 +210,7 @@ class CherryPhraseLibraryActivity : Activity() {
         val confirm = button(R.string.cherry_phrase_confirm, 0xFF4B8FFF.toInt(), Color.WHITE) {
             val title = input.text.toString().trim()
             groups.add(title)
-            prefs.edit().putString("groups", JSONArray(groups).toString()).apply()
+            CherryPhraseGroups.save(this, groups)
             selected = groups.lastIndex + 2
             refreshTabs()
             refreshRows()

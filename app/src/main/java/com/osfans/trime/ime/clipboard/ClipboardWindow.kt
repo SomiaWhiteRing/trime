@@ -22,6 +22,7 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.StateListDrawable
@@ -30,6 +31,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.CheckBox
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -45,6 +47,7 @@ import androidx.paging.PagingData
 import androidx.paging.filter
 import androidx.viewpager2.widget.ViewPager2
 import com.osfans.trime.R
+import com.osfans.trime.data.db.CherryPhraseGroups
 import com.osfans.trime.data.db.ClipboardHelper
 import com.osfans.trime.data.db.CollectionHelper
 import com.osfans.trime.data.db.DatabaseBean
@@ -102,12 +105,18 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         LINK(R.string.cherry_clipboard_link, "链接"),
     }
 
-    private enum class PhraseFilter(val text: String, val width: Int) {
-        FAVORITES("收藏", 45),
-        RECENT("最近", 45),
-        DEFAULT("默认分组", 73),
+    private data class PhraseFilter(val text: String, val width: Int? = null, val artwork: String? = null) {
+        companion object {
+            val FAVORITES = PhraseFilter("收藏", 45, "favorites")
+            val RECENT = PhraseFilter("最近", 45, "recent")
+            val DEFAULT = PhraseFilter("默认分组", 73, "default")
+        }
     }
 
+    private val phraseFilters by lazy {
+        listOf(PhraseFilter.FAVORITES, PhraseFilter.RECENT, PhraseFilter.DEFAULT) +
+            CherryPhraseGroups.names(context).map { PhraseFilter(it) }
+    }
     private val phraseFilter = MutableStateFlow(PhraseFilter.DEFAULT)
     private var displayedPhrases = emptyList<DatabaseBean>()
     private var phraseGroups = emptyMap<PhraseFilter, List<DatabaseBean>>()
@@ -768,7 +777,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         val rows = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(context.dp(8), context.dp(5f / 3f).roundToInt(), context.dp(8), 0)
-            for (pair in PhraseFilter.entries.chunked(2)) {
+            for (pair in phraseFilters.chunked(2)) {
                 addView(LinearLayout(context).apply {
                     for ((index, filter) in pair.withIndex()) {
                         val count = TextView(context).apply {
@@ -779,8 +788,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         }
                         counts[filter] = count
                         val card = FrameLayout(context).apply {
-                            val name = filter.name.lowercase()
-                            val artwork = scope.drawable("clipboard-phrase-random-$name.png")
+                            val artwork = filter.artwork?.let { scope.drawable("clipboard-phrase-random-$it.png") }
                             background = artwork ?: GradientDrawable().apply {
                                 setColor(0xFF434343.toInt())
                                 cornerRadius = context.dp(4f)
@@ -877,12 +885,17 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     setBackgroundColor(0xFF363636.toInt())
                     setPadding(context.dp(8), 0, 0, 0)
                 }
-                val labels = PhraseFilter.entries.associateWith { filter ->
+                val labels = phraseFilters.associateWith { filter ->
                     TextView(context).apply {
                         text = filter.text
                         textSize = 14f
                         gravity = Gravity.CENTER
-                        filters.addView(this, LinearLayout.LayoutParams(context.dp(filter.width), LinearLayout.LayoutParams.MATCH_PARENT))
+                        if (filter.width == null) {
+                            minWidth = context.dp(74f / 3f).roundToInt()
+                            setPadding(context.dp(8), 0, context.dp(8), context.dp(8))
+                        }
+                        val width = filter.width?.let { context.dp(it) } ?: LinearLayout.LayoutParams.WRAP_CONTENT
+                        filters.addView(this, LinearLayout.LayoutParams(width, LinearLayout.LayoutParams.MATCH_PARENT))
                     }
                 }
                 fun select(filter: PhraseFilter) {
@@ -894,8 +907,16 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     phraseFilter.value = filter
                     labels.forEach { (item, label) ->
                         val state = if (item == filter) "active" else "idle"
-                        label.foreground = scope.drawable("clipboard-phrase-${item.name.lowercase()}-$state.png")
-                        label.setTextColor(if (label.foreground != null) Color.TRANSPARENT else if (item == filter) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt())
+                        val artwork = item.artwork?.let { scope.drawable("clipboard-phrase-$it-$state.png") }
+                        label.foreground = artwork
+                        label.setTextColor(if (artwork != null) Color.TRANSPARENT else if (item == filter) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt())
+                        if (item.artwork == null) {
+                            label.background = if (item == filter) LayerDrawable(arrayOf(ColorDrawable(0xFF9D1E42.toInt()))).apply {
+                                setLayerSize(0, label.paint.measureText(item.text).roundToInt(), context.dp(2))
+                                setLayerGravity(0, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+                                setLayerInsetBottom(0, context.dp(7f / 3f).roundToInt())
+                            } else null
+                        }
                     }
                     recyclerView.scrollToPosition(0)
                 }
@@ -910,10 +931,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     }
                 }, LinearLayout.LayoutParams(context.dp(39), LinearLayout.LayoutParams.MATCH_PARENT))
                 select(phraseFilter.value)
+                val filterStrip = HorizontalScrollView(context).apply {
+                    isHorizontalScrollBarEnabled = false
+                    addView(filters, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                }
                 val randomGrid = createRandomPhraseGrid()
                 fun showMode(mode: CherrySendMode) {
                     val random = mode == CherrySendMode.RANDOM
-                    filters.visibility = if (random) View.GONE else View.VISIBLE
+                    filterStrip.visibility = if (random) View.GONE else View.VISIBLE
                     recyclerView.visibility = if (random) View.GONE else View.VISIBLE
                     randomGrid.visibility = if (random) View.VISIBLE else View.GONE
                 }
@@ -922,7 +947,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 root.addView(
                     LinearLayout(context).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(filters, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(34)))
+                        addView(filterStrip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(34)))
                         addView(FrameLayout(context).apply {
                             addView(recyclerView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                             addView(randomGrid, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
@@ -1207,7 +1232,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         PhraseFilter.FAVORITES to records.filter { it.pinned },
                         PhraseFilter.RECENT to ids.mapNotNull(byId::get),
                     )
-                    displayedPhrases = phraseGroups.getValue(filter)
+                    displayedPhrases = phraseGroups[filter].orEmpty()
                     updateRandomPhraseCounts()
                     phraseSequenceIndex = displayedPhrases.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
                     updatePhraseSequence()
