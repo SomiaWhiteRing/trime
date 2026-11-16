@@ -33,6 +33,7 @@ import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
 import androidx.paging.Pager
@@ -122,6 +123,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
     private var clipboardBeansSubmitJob: Job? = null
     private var clipboardCountJob: Job? = null
+    private var clipboardRevealJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
     private var translationPopup: PopupWindow? = null
     private var deleteConfirmation: PopupWindow? = null
@@ -641,6 +643,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
     override fun onCreateView() = ClipboardLayout(context, scope).apply {
         clipboardLayout = this
+        if (usesCherryLayout) {
+            setBackgroundColor(0xFF363636.toInt())
+            titleUi.tabLayout.alpha = 0f
+            viewPager.alpha = 0f
+        }
         clipboardPagesAdapter = object : ClipboardPagesAdapter() {
             override fun getItemCount(): Int = tabLabels.size
             override fun onCreatePage(position: Int): ClipboardPageUi = when (position) {
@@ -758,29 +765,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    fun open() {
-        val keyboard by instance<KeyboardWindow>()
-        if (!usesCherryLayout || !windowManager.isAttached(keyboard)) {
-            windowManager.attachWindow(this)
-            return
-        }
-        service.lifecycleScope.launch {
-            if (initialTab == 0) {
-                startClipboardPaging()
-                clipboardBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
-                updateHistoryCount(clipboardBeansAdapter.itemCount)
-            } else {
-                startCollectionPaging()
-                collectionBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
-            }
-            if (windowManager.isAttached(keyboard)) {
-                windowManager.attachWindow(this@ClipboardWindow)
-            } else {
-                clipboardBeansSubmitJob?.cancel()
-                collectionBeansSubmitJob?.cancel()
-            }
-        }
-    }
+    fun open() = windowManager.attachWindow(this)
 
     private fun startClipboardPaging() {
         clipboardBeansSubmitJob = service.lifecycleScope.launch {
@@ -802,6 +787,22 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         if (usesCherryLayout) {
             clipboardCountJob = service.lifecycleScope.launch {
                 ClipboardHelper.observeItemCount().collect(::updateHistoryCount)
+            }
+            clipboardLayout.doOnPreDraw { layout ->
+                // Draw the outer panel once before revealing the title tabs and contents together.
+                layout.postOnAnimation {
+                    if (!layout.isAttachedToWindow) return@postOnAnimation
+                    clipboardRevealJob = service.lifecycleScope.launch {
+                        if (initialTab == 0) {
+                            clipboardBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
+                            updateHistoryCount(clipboardBeansAdapter.itemCount)
+                        } else {
+                            collectionBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
+                        }
+                        clipboardLayout.titleUi.tabLayout.alpha = 1f
+                        clipboardLayout.viewPager.alpha = 1f
+                    }
+                }
             }
         }
     }
@@ -863,6 +864,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         collectionBeansAdapter.dismissPopupMenu()
         clipboardBeansSubmitJob?.cancel()
         clipboardCountJob?.cancel()
+        clipboardRevealJob?.cancel()
         collectionBeansSubmitJob?.cancel()
     }
 
