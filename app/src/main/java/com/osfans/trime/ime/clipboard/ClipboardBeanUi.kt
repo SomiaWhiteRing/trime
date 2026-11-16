@@ -12,6 +12,8 @@ import android.view.Gravity
 import android.view.View
 import android.widget.ImageView
 import android.widget.CheckBox
+import android.widget.HorizontalScrollView
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.osfans.trime.R
@@ -70,7 +72,13 @@ class ClipboardBeanUi(
     }
 
     private val actions = LinearLayout(ctx).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        setPaddingRelative(ctx.dp(8), 0, ctx.dp(8), 0)
+    }
+    private val actionScroller = HorizontalScrollView(ctx).apply {
+        isHorizontalScrollBarEnabled = false
         visibility = View.GONE
+        addView(actions, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.MATCH_PARENT))
     }
     private val checkbox = CheckBox(ctx).apply {
         visibility = View.GONE
@@ -115,7 +123,7 @@ class ClipboardBeanUi(
                 add(LinearLayout(ctx).apply {
                     orientation = LinearLayout.VERTICAL
                     addView(layout, LinearLayout.LayoutParams(matchParent, wrapContent))
-                    addView(actions, LinearLayout.LayoutParams(matchParent, dp(38)))
+                    addView(actionScroller, LinearLayout.LayoutParams(matchParent, dp(38)))
                 }, lParams(matchParent, wrapContent))
             } else {
                 add(layout, lParams(matchParent, matchParent))
@@ -152,24 +160,29 @@ class ClipboardBeanUi(
                 addView(TextView(ctx).apply {
                     setText(label)
                     textSize = 13f
+                    setSingleLine()
+                    gravity = Gravity.CENTER
                     setTextColor(0xFFB3B3B3.toInt())
-                })
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
                 setOnClickListener { action() }
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                marginEnd = ctx.dp(38)
+            })
         }
         val setExpanded = { expanded: Boolean ->
-            actions.visibility = if (expanded) View.VISIBLE else View.GONE
+            actionScroller.visibility = if (expanded) View.VISIBLE else View.GONE
             textView.maxLines = if (expanded) 6 else 1
             textView.text = if (expanded) content else preview
             expand.rotation = if (expanded) 180f else 0f
         }
         expand.setImageResource(R.drawable.ic_cherry_clipboard_expand)
-        expand.setOnClickListener { setExpanded(actions.visibility != View.VISIBLE) }
+        expand.setOnClickListener { setExpanded(actionScroller.visibility != View.VISIBLE) }
+        actionScroller.scrollTo(0, 0)
         setExpanded(false)
     }
 
     fun bindSelection(selected: Boolean, toggle: () -> Unit) {
-        actions.visibility = View.GONE
+        actionScroller.visibility = View.GONE
         expand.visibility = View.GONE
         textView.maxLines = 1
         textView.setPaddingDp(41, 8, 37, 8)
