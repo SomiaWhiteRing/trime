@@ -23,6 +23,8 @@ parser.add_argument("--symbol-page-boundary", nargs=3, action="append", default=
                     help="Idle and held 1116 x 146 footer crops for a disabled previous or next key")
 parser.add_argument("--clipboard-title-tabs", nargs=2, action="append", default=[], metavar=("SELECTED", "CAPTURE"),
                     help="1116 x 114 title crop from y=1630 with history, phrases, or recommend selected")
+parser.add_argument("--clipboard-chooser-tabs", nargs=2, action="append", default=[], metavar=("SELECTED", "CAPTURE"),
+                    help="1116 x 184 chooser crop from y=1630 with history, phrases, or recommend selected")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -101,6 +103,18 @@ for selected, capture in args.clipboard_title_tabs:
         tile.paste(reference.crop((glyph_left, 40, glyph_right, 84)), (glyph_left - tab_left, 30))
         state = "active" if selected == name else "idle"
         tile.save(assets / f"clipboard-tab-{name}-{state}.png")
+
+
+chooser_bounds = {"history": (48, 246), "phrases": (264, 462), "recommend": (480, 636)}
+for selected, capture in args.clipboard_chooser_tabs:
+    if selected not in chooser_bounds:
+        parser.error(f"unknown clipboard chooser tab {selected!r}")
+    reference = Image.open(capture).convert("RGB")
+    if reference.size != (1116, 184):
+        raise ValueError("Expected a CHERRY chooser crop at 1116 x 184")
+    for name, (left, right) in chooser_bounds.items():
+        state = "active" if selected == name else "idle"
+        reference.crop((left, 42, right, 123)).save(assets / f"clipboard-chooser-{name}-{state}.png")
 
 
 def resource(file):

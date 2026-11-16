@@ -9,12 +9,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.viewpager2.widget.ViewPager2
@@ -31,12 +30,17 @@ import splitties.views.dsl.core.wrapContent
 import kotlin.math.roundToInt
 
 @SuppressLint("ViewConstructor")
-class ClipboardLayout(context: Context, private val scope: ThemeScope) : ConstraintLayout(context) {
+class ClipboardLayout(
+    context: Context,
+    private val scope: ThemeScope,
+    private val attachTabChooser: (View) -> Unit,
+) : ConstraintLayout(context) {
 
     val viewPager = view(::ViewPager2) {}
 
     val titleUi = ClipboardTitleUi(context, scope)
-    private var tabChooser: PopupWindow? = null
+    private var tabChooser: View? = null
+    internal val isShowingTabChooser get() = tabChooser != null
     private var settings: View? = null
     private var segments: View? = null
     internal val isShowingSegments get() = segments != null
@@ -56,7 +60,11 @@ class ClipboardLayout(context: Context, private val scope: ThemeScope) : Constra
         })
     }
 
-    internal fun dismissTabChooser() = tabChooser?.dismiss()
+    internal fun dismissTabChooser() {
+        val chooser = tabChooser ?: return
+        tabChooser = null
+        (chooser.parent as? ViewGroup)?.removeView(chooser)
+    }
 
     internal fun showSegments(content: View) {
         dismissTabChooser()
@@ -93,21 +101,29 @@ class ClipboardLayout(context: Context, private val scope: ThemeScope) : Constra
             return
         }
         val overlay = FrameLayout(context).apply {
-            setBackgroundColor(0x33000000)
+            setBackgroundColor(0x30000000)
             setOnClickListener { dismissTabChooser() }
         }
         val tabs = FlexboxLayout(context).apply {
             flexWrap = FlexWrap.WRAP
-            setPadding(dp(13), dp(13f + 2f / 3).roundToInt(), dp(13), dp(12f + 2f / 3).roundToInt())
+            setPadding(dp(13), dp(13f + 2f / 3).roundToInt(), dp(13), dp(13))
             isClickable = true
             background = GradientDrawable().apply {
                 val radius = dp(20).toFloat()
                 cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, radius, radius, radius, radius)
-                setColor(0xFF454547.toInt())
+                setColor(0xFF434343.toInt())
             }
         }
         labels.forEachIndexed { index, label ->
             val selected = index == viewPager.currentItem
+            val artworkName = when (context.getText(label).toString()) {
+                "剪贴板" -> "history"
+                "常用语" -> "phrases"
+                "推荐" -> "recommend"
+                else -> null
+            }
+            val state = if (selected) "active" else "idle"
+            val artwork = artworkName?.let { scope.drawable("clipboard-chooser-$it-$state.png") }
             val tab = TextView(context).apply {
                 setText(label)
                 textSize = 14f
@@ -120,23 +136,27 @@ class ClipboardLayout(context: Context, private val scope: ThemeScope) : Constra
                     cornerRadius = dp(20).toFloat()
                     setStroke(dp(1f / 3).roundToInt().coerceAtLeast(1), if (selected) accent else 0xB8959697.toInt())
                 }
+                if (artwork != null) {
+                    foreground = artwork
+                    background = null
+                    setTextColor(Color.TRANSPARENT)
+                }
                 setOnClickListener {
                     dismissTabChooser()
                     viewPager.setCurrentItem(index, false)
                 }
             }
-            tabs.addView(tab, FlexboxLayout.LayoutParams(wrapContent, wrapContent).apply {
+            val width = if (artwork == null) wrapContent else dp(if (artworkName == "recommend") 52 else 66)
+            val height = if (artwork == null) wrapContent else dp(27)
+            tabs.addView(tab, FlexboxLayout.LayoutParams(width, height).apply {
                 setMargins(dp(3), 0, dp(3), dp(6))
             })
         }
         overlay.addView(tabs, FrameLayout.LayoutParams(matchParent, wrapContent))
-        val title = titleUi.root
-        tabChooser = PopupWindow(overlay, width, height + title.height, true).apply {
-            inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            animationStyle = 0
-            setOnDismissListener { tabChooser = null }
-            showAsDropDown(title, 0, -title.height, Gravity.START)
-        }
+        overlay.addView(View(context).apply {
+            setBackgroundColor(0xFF3C3C3C.toInt())
+        }, FrameLayout.LayoutParams(matchParent, dp(1f / 3).roundToInt().coerceAtLeast(1)))
+        tabChooser = overlay
+        attachTabChooser(overlay)
     }
 }

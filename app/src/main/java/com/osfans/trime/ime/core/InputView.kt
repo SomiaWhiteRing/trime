@@ -15,6 +15,7 @@ import android.view.inputmethod.InlineSuggestionsResponse
 import android.widget.ImageView
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
@@ -131,7 +132,7 @@ class InputView(
     private val preedit: PreeditDelegate by instance()
     private val windowManager: BoardWindowManager by instance()
 
-    internal fun handleSegmentsBack(commit: Boolean) = windowManager.handleSegmentsBack(commit)
+    internal fun handleClipboardBack(commit: Boolean) = windowManager.handleClipboardBack(commit)
     private val inputBar: InputBarDelegate by instance()
     private val keyboardWindow: KeyboardWindow by instance()
     private val liquidWindow: LiquidWindow by instance()
@@ -178,7 +179,14 @@ class InputView(
         inputBar.setTranslationVisible(visible && translationPanel.inputConnection != null)
     }
 
-    val keyboardView: View
+    val keyboardView: ConstraintLayout
+
+    internal fun attachClipboardChooser(chooser: View) {
+        keyboardView.add(chooser, lParams(matchParent, 0) {
+            below(translationPanel)
+            bottomToBottom = windowManager.view.id
+        })
+    }
 
     /** Restyles colors after a scheme switch without rebuilding the view tree. */
     fun refreshColors() {

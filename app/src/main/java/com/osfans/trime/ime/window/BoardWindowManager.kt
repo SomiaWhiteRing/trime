@@ -141,6 +141,6 @@ class BoardWindowManager(override val di: DI) : DIAware {
 
     fun isAttached(window: BoardWindow) = currentWindow === window
 
-    internal fun handleSegmentsBack(commit: Boolean) =
-        (currentWindow as? ClipboardWindow)?.handleSegmentsBack(commit) == true
+    internal fun handleClipboardBack(commit: Boolean) =
+        (currentWindow as? ClipboardWindow)?.handleClipboardBack(commit) == true
 }

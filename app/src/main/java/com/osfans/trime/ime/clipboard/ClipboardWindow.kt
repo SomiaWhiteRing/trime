@@ -50,6 +50,7 @@ import com.osfans.trime.data.prefs.AppPrefs
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
 import com.osfans.trime.ime.core.InputTabLayout
+import com.osfans.trime.ime.core.InputView
 import com.osfans.trime.ime.core.TrimeInputMethodService
 import com.osfans.trime.ime.keyboard.KeyboardWindow
 import com.osfans.trime.ime.segments.SegmentsWindow
@@ -418,8 +419,13 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    internal fun handleSegmentsBack(commit: Boolean): Boolean =
-        if (commit) clipboardLayout.dismissSegments() else clipboardLayout.isShowingSegments
+    internal fun handleClipboardBack(commit: Boolean): Boolean {
+        if (clipboardLayout.isShowingTabChooser) {
+            if (commit) clipboardLayout.dismissTabChooser()
+            return true
+        }
+        return if (commit) clipboardLayout.dismissSegments() else clipboardLayout.isShowingSegments
+    }
 
     private fun translateClipboard(text: String) {
         if (text.isBlank()) return
@@ -643,7 +649,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    override fun onCreateView() = ClipboardLayout(context, scope).apply {
+    private val inputView: InputView by instance()
+
+    override fun onCreateView() = ClipboardLayout(context, scope, inputView::attachClipboardChooser).apply {
         clipboardLayout = this
         if (usesCherryLayout) {
             setBackgroundColor(0xFF363636.toInt())
