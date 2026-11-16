@@ -248,8 +248,8 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                         ?.takeIf { it.isNotBlank() } ?: "luna_pinyin"
                     val transferToEnglish = prediction == null && !returnToChinese &&
                         cherryPreferences.getBoolean("prediction", false)
-                    val rawInput = if (transferToEnglish) getRawInput() else ""
-                    if (!transferToEnglish) commitComposition()
+                    val rawInput = if (transferToEnglish && getComposition().selStart == 0) getRawInput() else ""
+                    if (rawInput.isEmpty()) commitComposition()
                     when (prediction) {
                         true -> {
                             if (selectSchema("cherry_english")) {
@@ -286,7 +286,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                                         withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
                                     }
                                 } else {
-                                    if (transferToEnglish) commitComposition()
+                                    if (rawInput.isNotEmpty()) commitComposition()
                                     if (getRuntimeOption("ascii_mode")) {
                                         service.lifecycleScope.launch { keyboardWindow.switchKeyboard("cherry_ascii") }
                                     } else {

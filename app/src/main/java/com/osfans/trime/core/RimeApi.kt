@@ -72,6 +72,8 @@ interface RimeApi {
 
     suspend fun clearComposition()
 
+    suspend fun getComposition(): CompositionProto
+
     suspend fun getRawInput(): String
 
     /** Replace the composing input and position the caret at a UTF-8 byte offset. */

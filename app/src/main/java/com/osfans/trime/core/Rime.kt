@@ -257,6 +257,8 @@ class Rime :
         emitResponse()
     }
 
+    override suspend fun getComposition(): CompositionProto = withRimeContext { getRimeContext().composition }
+
     override suspend fun getRawInput(): String = withRimeContext {
         getRimeRawInput()
     }
