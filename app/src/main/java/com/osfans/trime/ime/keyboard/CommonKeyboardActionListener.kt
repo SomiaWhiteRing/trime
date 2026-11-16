@@ -163,9 +163,18 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                 when {
                     catalog == null -> keyboardWindow.switchKeyboard(target)
                     target == "number" -> windowManager.attachWindow(CherryNumberWindow(di, catalog))
-                    else -> windowManager.attachWindow(CherrySymbolsWindow(di, catalog) {
-                        windowManager.attachWindow(KeyboardWindow)
-                    })
+                    else -> service.postRimeJob {
+                        val rawInput = getRawInput()
+                        if (rawInput.isNotEmpty()) {
+                            withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
+                            clearComposition()
+                        }
+                        withContext(Dispatchers.Main.immediate) {
+                            windowManager.attachWindow(CherrySymbolsWindow(di, catalog) {
+                                windowManager.attachWindow(KeyboardWindow)
+                            })
+                        }
+                    }
                 }
             }
 
