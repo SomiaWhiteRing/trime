@@ -85,7 +85,7 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
 
 
 internal class CherryClipboardTabBackground(
-    private val padding: Float,
+    private val curveWidth: Float,
     private val divider: Float,
     private val overhang: Float,
 ) : Drawable() {
@@ -98,7 +98,7 @@ internal class CherryClipboardTabBackground(
         val right = bounds.right + overhang
         val top = bounds.top + divider
         val bottom = bounds.bottom - divider
-        val inset = padding.coerceAtMost(bounds.width() / 2f)
+        val inset = curveWidth.coerceAtMost(bounds.width() / 2f)
         path.reset()
         path.moveTo(left, bottom)
         path.cubicTo(left + inset, bottom, left, top, left + inset, top)
@@ -117,6 +117,10 @@ internal class CherryClipboardTabBackground(
         paint.alpha = opacity
         paint.strokeWidth = divider
         canvas.drawPath(path, paint)
+        val inset = curveWidth.coerceAtMost(bounds.width() / 2f)
+        val top = bounds.top + divider
+        paint.strokeWidth = divider * 1.5f
+        canvas.drawLine(bounds.left - overhang + inset, top, bounds.right + overhang - inset, top, paint)
 
     }
 
