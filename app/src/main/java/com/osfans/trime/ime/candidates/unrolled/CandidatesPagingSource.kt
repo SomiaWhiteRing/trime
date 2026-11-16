@@ -15,6 +15,7 @@ class CandidatesPagingSource(
     val rime: RimeSession,
     val total: Int,
     val offset: Int,
+    private val includeRawInputFallback: Boolean = false,
 ) : PagingSource<Int, CandidateProto>() {
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, CandidateProto> {
         // use candidate index for key, null means load from beginning (including offset)
@@ -23,7 +24,12 @@ class CandidatesPagingSource(
         Timber.d("getCandidates(offset=$startIndex, limit=$pageSize)")
         val candidates =
             rime.runOnReady {
-                getCandidates(startIndex, pageSize)
+                val page = getCandidates(startIndex, pageSize)
+                if (includeRawInputFallback && startIndex == 0 && page.isEmpty()) {
+                    val input = getRawInput()
+                    if (input.isNotEmpty()) return@runOnReady arrayOf(CandidateProto(input, "", ""))
+                }
+                page
             }
         val prevKey = if (startIndex >= pageSize) startIndex - pageSize else null
         val nextKey = if (total > 0) {

@@ -7,6 +7,7 @@ package com.osfans.trime.ime.candidates.unrolled
 import android.annotation.SuppressLint
 import android.content.Context
 import android.view.Gravity
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -56,6 +57,28 @@ class UnrolledCandidateLayout(
 
     fun resetPosition() {
         recyclerView.scrollToPosition(0)
+    }
+
+    fun installCherryAlternatives(): List<TextView> {
+        val sidebar = LinearLayout(context).apply {
+            id = View.generateViewId()
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(5), dp(4), dp(13))
+            background = scope.drawable("candidate-sidebar.png")
+        }
+        addView(sidebar, LayoutParams(dp(65), 0).apply {
+            startToStart = LayoutParams.PARENT_ID
+            topToTop = LayoutParams.PARENT_ID
+            bottomToTop = (recyclerView.layoutParams as LayoutParams).bottomToTop
+        })
+        return List(5) {
+            TextView(context).apply {
+                gravity = Gravity.CENTER
+                textSize = 13f
+                setTextColor(0xFFB3B3B3.toInt())
+                sidebar.addView(this, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(40)))
+            }
+        }
     }
 
     fun installCherryFooter(grid: GridLayoutManager, onReturn: () -> Unit) {

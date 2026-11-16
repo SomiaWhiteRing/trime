@@ -8,6 +8,7 @@ package com.osfans.trime.ime.candidates.unrolled.window
 import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.RectShape
 import android.view.View
+import android.widget.TextView
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -17,6 +18,7 @@ import androidx.paging.PagingConfig
 import androidx.recyclerview.widget.RecyclerView
 import com.osfans.trime.daemon.RimeSession
 import com.osfans.trime.daemon.launchOnReady
+import com.osfans.trime.core.Candidates
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
 import com.osfans.trime.ime.bar.InputBarDelegate
@@ -110,12 +112,16 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
                     rime,
                     total = compactCandidate.adapter.total,
                     offset = adapter.offset,
+                    includeRawInputFallback = usesCherryLayout,
                 )
             },
         )
     }
 
     private var candidatesSubmitJob: Job? = null
+    private var rawInput = ""
+    private var alternativeIndex = 0
+    private var alternatives = emptyList<TextView>()
 
     internal fun open() {
         if (!usesCherryLayout) {
@@ -125,6 +131,7 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
         val compactItems = compactCandidate.adapter.items
         val keyboard by instance<KeyboardWindow>()
         service.lifecycleScope.launch {
+            rawInput = rime.runOnReady { getRawInput() }
             startCandidatePaging(service.lifecycleScope)
             adapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
             if (adapter.itemCount > 0 && windowManager.isAttached(keyboard) && compactCandidate.adapter.items === compactItems) {
@@ -145,18 +152,22 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
 
     override fun onAttached() {
         lifecycleCoroutineScope = candidateLayout.findViewTreeLifecycleOwner()!!.lifecycleScope
-        if (usesCherryLayout) inputView.showCherryCandidateBoard(true)
+        if (usesCherryLayout) {
+            inputView.showCherryCandidateBoard(true)
+            alternatives = candidateLayout.installCherryAlternatives()
+            updateAlternatives()
+        }
         bar.unrollButtonStateMachine.push(UnrollButtonStateMachine.TransitionEvent.UnrolledCandidatesAttached)
         offsetJob =
             lifecycleCoroutineScope.launch {
                 compactCandidate.unrolledCandidateOffset.drop(if (usesCherryLayout) 1 else 0).collect {
-                    if (it <= 0) {
-                        windowManager.attachWindow(KeyboardWindow)
-                    } else {
+                    if (it <= 0 && (!usesCherryLayout || rime.runOnReady { getRawInput().isEmpty() })) {
+                        returnToKeyboard()
+                    } else if (!usesCherryLayout) {
                         candidateLayout.resetPosition()
                         adapter.refreshWith(
-                            offset = if (usesCherryLayout) 0 else it,
-                            highlightedIndex = if (usesCherryLayout) -1 else compactCandidate.adapter.highlightedIdx,
+                            offset = it,
+                            highlightedIndex = compactCandidate.adapter.highlightedIdx,
                         )
                     }
                 }
@@ -167,7 +178,14 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
     fun bindCandidateUiViewHolder(holder: CandidateViewHolder) {
         holder.itemView.run {
             setOnClickListener { _ ->
-                rime.launchOnReady { it.selectCandidate(holder.idx, global = true) }
+                val index = holder.idx
+                val text = holder.text
+                rime.launchOnReady {
+                    if (!it.selectCandidate(index, global = true) && usesCherryLayout && index == 0 && it.getRawInput() == text) {
+                        it.clearComposition()
+                        service.commitText(text)
+                    }
+                }
             }
             setOnLongClickListener { view ->
                 inputView.showCandidateActionMenu(holder.idx, holder.text, view, global = true)
@@ -178,6 +196,33 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
 
     protected fun returnToKeyboard() {
         windowManager.attachWindow(KeyboardWindow)
+    }
+
+    private fun updateAlternatives() {
+        val letter = rawInput.getOrNull(alternativeIndex)?.lowercaseChar()?.takeIf { it in 'a'..'z' }
+        val number = letter?.let { "qwertyuiop".indexOf(it) }?.takeIf { it >= 0 }?.let { "1234567890"[it] }
+        val values = listOf(letter, number, letter?.uppercaseChar())
+        alternatives.forEachIndexed { index, view ->
+            val value = values.getOrNull(index)
+            view.text = value?.toString().orEmpty()
+            view.setOnClickListener(if (value == null) null else View.OnClickListener {
+                val position = alternativeIndex
+                val replacement = rawInput.replaceRange(position, position + 1, value.toString())
+                lifecycleCoroutineScope.launch {
+                    val caret = replacement.substring(0, position + 1).encodeToByteArray().size
+                    if (!rime.runOnReady { setRawInput(replacement, caret) }) return@launch
+                    rawInput = replacement
+                    alternativeIndex = position + 1
+                    updateAlternatives()
+                }
+            })
+        }
+    }
+
+    override fun onCandidateListUpdate(data: Candidates.Bulk) {
+        if (!usesCherryLayout || !::candidateLayout.isInitialized) return
+        candidateLayout.resetPosition()
+        adapter.refreshWith(offset = 0, highlightedIndex = -1)
     }
 
     override fun onDetached() {

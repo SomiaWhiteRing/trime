@@ -74,6 +74,9 @@ interface RimeApi {
 
     suspend fun getRawInput(): String
 
+    /** Replace the composing input and position the caret at a UTF-8 byte offset. */
+    suspend fun setRawInput(input: String, caretPos: Int): Boolean
+
     suspend fun setRuntimeOption(
         option: String,
         value: Boolean,

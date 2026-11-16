@@ -151,6 +151,11 @@ def import_candidate_footer(reference, directory):
     footer = source.crop((0, 666, 1116, 825))
     assets = directory / "backgrounds" / "baidu_cherry"
     assets.mkdir(parents=True, exist_ok=True)
+    sidebar = source.crop((0, 0, 195, 666))
+    for top, bottom in ((60, 100), (173, 219), (292, 338)):
+        for y in range(top, bottom):
+            sidebar.paste(sidebar.getpixel((84, y)), (88, y, 120, y + 1))
+    sidebar.save(assets / "candidate-sidebar.png")
     for up in (False, True):
         for down in (False, True):
             variant = footer.copy()
