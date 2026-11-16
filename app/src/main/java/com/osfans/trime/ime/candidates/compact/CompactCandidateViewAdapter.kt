@@ -8,6 +8,7 @@ package com.osfans.trime.ime.candidates.compact
 import android.content.Context
 import android.view.ViewGroup
 import androidx.core.view.updateLayoutParams
+import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter4.BaseQuickAdapter
 import com.google.android.flexbox.FlexboxLayoutManager
 import com.osfans.trime.core.CandidateProto
@@ -21,6 +22,8 @@ import splitties.views.dsl.core.wrapContent
 open class CompactCandidateViewAdapter(
     val scope: ThemeScope,
 ) : BaseQuickAdapter<CandidateProto, CandidateViewHolder>() {
+    private val usesCherryLayout = "cherry_edit" in scope.theme.presetKeyboards
+
     init {
         setHasStableIds(true)
     }
@@ -59,10 +62,14 @@ open class CompactCandidateViewAdapter(
         parent: ViewGroup,
         viewType: Int,
     ): CandidateViewHolder {
-        val ui = CandidateItemUi(context, scope)
+        val ui = CandidateItemUi(context, scope, cherryCompact = usesCherryLayout)
         ui.root.apply {
-            if ("cherry_edit" !in scope.theme.presetKeyboards) minimumWidth = dp(40)
-            layoutParams = FlexboxLayoutManager.LayoutParams(wrapContent, matchParent)
+            if (usesCherryLayout) {
+                layoutParams = RecyclerView.LayoutParams(wrapContent, matchParent)
+            } else {
+                minimumWidth = dp(40)
+                layoutParams = FlexboxLayoutManager.LayoutParams(wrapContent, matchParent)
+            }
         }
         return CandidateViewHolder(ui)
     }
@@ -78,9 +85,11 @@ open class CompactCandidateViewAdapter(
         holder.text = item.text
         holder.comment = item.comment
         holder.idx = position // unused
-        holder.ui.root.updateLayoutParams<FlexboxLayoutManager.LayoutParams> {
-            minWidth = this@CompactCandidateViewAdapter.layoutMinWidth
-            flexGrow = this@CompactCandidateViewAdapter.layoutFlexGrow
+        if (!usesCherryLayout) {
+            holder.ui.root.updateLayoutParams<FlexboxLayoutManager.LayoutParams> {
+                minWidth = this@CompactCandidateViewAdapter.layoutMinWidth
+                flexGrow = this@CompactCandidateViewAdapter.layoutFlexGrow
+            }
         }
     }
 }

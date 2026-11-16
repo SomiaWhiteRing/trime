@@ -19,6 +19,7 @@ import splitties.views.dsl.constraintlayout.lParams
 import splitties.views.dsl.constraintlayout.startOfParent
 import splitties.views.dsl.core.Ui
 import splitties.views.dsl.core.add
+import kotlin.math.roundToInt
 
 class CandidateUi(
     override val ctx: Context,
@@ -70,7 +71,11 @@ class CandidateUi(
                 lParams {
                     centerVertically()
                     startOfParent(dp(if (usesCherryLayout) 0 else theme.style.candidatePadding / 2))
-                    before(unrollButton)
+                    if (cherryArrow) {
+                        endOfParent(dp(170f / 3f).roundToInt())
+                    } else {
+                        before(unrollButton)
+                    }
                 },
             )
         }

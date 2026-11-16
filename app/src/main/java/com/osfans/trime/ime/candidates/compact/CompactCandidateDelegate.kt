@@ -10,6 +10,7 @@ import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.RectShape
 import android.view.ContextThemeWrapper
 import androidx.core.view.updateLayoutParams
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.flexbox.FlexboxLayoutManager
 import com.osfans.trime.R
@@ -46,6 +47,7 @@ class CompactCandidateDelegate(override val di: DI) :
     private val theme: Theme
         get() = scope.theme
 
+    private val usesCherryLayout = "cherry_edit" in scope.theme.presetKeyboards
     private val fillStyle by AppPrefs.defaultInstance().keyboard.horizontalCandidateMode
 
     private val maxSpanCountPref by lazy {
@@ -110,8 +112,17 @@ class CompactCandidateDelegate(override val di: DI) :
         layoutFlexGrow = flexGrow
     }
 
-    val layoutManager by lazy {
-        object : FlexboxLayoutManager(context) {
+    val layoutManager: RecyclerView.LayoutManager by lazy {
+        if (usesCherryLayout) {
+            object : LinearLayoutManager(context, RecyclerView.HORIZONTAL, false) {
+                override fun canScrollHorizontally() = false
+
+                override fun onLayoutCompleted(state: RecyclerView.State?) {
+                    super.onLayoutCompleted(state)
+                    refreshUnrolled(findLastCompletelyVisibleItemPosition() + 1)
+                }
+            }
+        } else object : FlexboxLayoutManager(context) {
             override fun canScrollHorizontally(): Boolean = false
 
             override fun canScrollVertically(): Boolean = false
@@ -178,7 +189,7 @@ class CompactCandidateDelegate(override val di: DI) :
 
         val maxSpanCount = maxSpanCountPref.getValue()
 
-        when (fillStyle) {
+        if (!usesCherryLayout) when (fillStyle) {
             CompactCandidateMode.NEVER_FILL -> {
                 layoutMinWidth = 0
                 layoutFlexGrow = 0f

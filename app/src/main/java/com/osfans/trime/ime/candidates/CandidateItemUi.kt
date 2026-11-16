@@ -46,6 +46,7 @@ class CandidateItemUi(
     override val ctx: Context,
     private val scope: ThemeScope,
     private val cherryExpanded: Boolean = false,
+    private val cherryCompact: Boolean = false,
 ) : Ui {
     private val theme: Theme
         get() = scope.theme
@@ -170,6 +171,12 @@ class CandidateItemUi(
         val contentColor = if (highlighted) hlBackColor else Color.TRANSPARENT
 
         content.background = roundedRippleDrawable(hlBackColor, cornerRadius, contentColor)
+        if (cherryCompact) {
+            val latin = item.text.any { it in 'A'..'Z' || it in 'a'..'z' } &&
+                item.text.all { it.code < 128 }
+            text.setTextScaleX(if (latin) 0.973f else 1f)
+            content.horizontalPadding = ctx.dp(theme.style.candidatePadding) + if (latin) ctx.dp(1f / 3f).toInt() else 0
+        }
         text.text = item.text
         text.setTextColor(tColor)
 
