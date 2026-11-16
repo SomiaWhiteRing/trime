@@ -38,8 +38,11 @@ import com.osfans.trime.ime.popup.PopupDelegate
 import com.osfans.trime.ime.symbol.LiquidWindow
 import com.osfans.trime.ime.translation.InlineTranslationPanel
 import com.osfans.trime.ime.window.BoardWindowManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.kodein.di.DI
 import org.kodein.di.DIAware
 import org.kodein.di.allInstances
@@ -356,7 +359,30 @@ class InputView(
         }
     }
 
+    private var cherryLanguageUpdates: MutableList<RimeMessage<*>>? = null
+
+    internal suspend fun updateCherryLanguagePanel(change: suspend () -> Unit) {
+        val updates = ArrayList<RimeMessage<*>>()
+        withContext(Dispatchers.Main.immediate) { cherryLanguageUpdates = updates }
+        try {
+            change()
+        } finally {
+            withContext(NonCancellable + Dispatchers.Main.immediate) {
+                cherryLanguageUpdates = null
+                updates.forEach(::handleRimeMessage)
+            }
+        }
+    }
+
     override fun handleRimeMessage(it: RimeMessage<*>) {
+        val pending = cherryLanguageUpdates
+        if (pending != null && (it is RimeMessage.SchemaMessage ||
+                it is RimeMessage.OptionMessage && it.data.option == "ascii_mode" ||
+                it is RimeMessage.CompositionMessage || it is RimeMessage.BulkCandidatesMessage)
+        ) {
+            pending.add(it)
+            return
+        }
         when (it) {
             is RimeMessage.SchemaMessage -> {
                 broadcaster.onRimeSchemaUpdated(it.data)

@@ -253,6 +253,8 @@ class Rime :
 
     override suspend fun commitComposition(): Boolean = withRimeContext { commitRimeComposition().also { if (it) emitResponse() } }
 
+    override suspend fun refreshInputPanel() = withRimeContext { emitResponse() }
+
     override suspend fun clearComposition() = withRimeContext {
         clearRimeComposition()
         emitResponse()

@@ -23,6 +23,7 @@ import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeManager
 import com.osfans.trime.data.theme.model.LiquidKeyboard
 import com.osfans.trime.ime.clipboard.ClipboardWindow
+import com.osfans.trime.ime.core.InputView
 import com.osfans.trime.ime.core.TrimeInputMethodService
 import com.osfans.trime.ime.dialog.EnabledSchemaPickerDialog
 import com.osfans.trime.ime.switches.SwitchOptionWindow
@@ -56,6 +57,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
     private val rime: RimeSession by instance()
     private val windowManager: BoardWindowManager by instance()
     private val keyboardWindow: KeyboardWindow by instance()
+    private val inputView: InputView by instance()
     private val liquidWindow: LiquidWindow by instance()
 
     private val prefs = AppPrefs.defaultInstance()
@@ -243,58 +245,64 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
             private fun switchCherryLanguage(prediction: Boolean? = null) {
                 val returnToChinese = keyboardWindow.isCherryEnglishKeyboard
                 service.postRimeJob {
-                    val current = selectedSchemaId()
-                    val chinese = cherryPreferences.getString("chinese_schema", null)
-                        ?.takeIf { it.isNotBlank() } ?: "luna_pinyin"
-                    val transferToEnglish = prediction == null && !returnToChinese &&
-                        cherryPreferences.getBoolean("prediction", false)
-                    val rawInput = if (transferToEnglish && getComposition().selStart == 0) getRawInput() else ""
-                    if (rawInput.isEmpty()) commitComposition()
-                    when (prediction) {
-                        true -> {
-                            if (selectSchema("cherry_english")) {
-                                setRuntimeOption("ascii_mode", false)
-                                cherryPreferences.edit().putBoolean("prediction", true).apply()
-                            }
-                        }
-
-                        false -> {
-                            if (selectSchema(chinese)) {
-                                setRuntimeOption("ascii_mode", true)
-                                cherryPreferences.edit().putBoolean("prediction", false).apply()
-                            }
-                        }
-
-                        null -> when {
-                            returnToChinese -> {
-                                val needsChineseSchema = current == "cherry_english" || current.isBlank()
-                                if (needsChineseSchema && !selectSchema(chinese)) return@postRimeJob
-                                if (getRuntimeOption("ascii_mode")) {
+                    inputView.updateCherryLanguagePanel {
+                        val current = selectedSchemaId()
+                        val chinese = cherryPreferences.getString("chinese_schema", null)
+                            ?.takeIf { it.isNotBlank() } ?: "luna_pinyin"
+                        val transferToEnglish = prediction == null && !returnToChinese &&
+                            cherryPreferences.getBoolean("prediction", false)
+                        val rawInput = if (transferToEnglish && getComposition().selStart == 0) getRawInput() else ""
+                        if (rawInput.isEmpty()) commitComposition()
+                        when (prediction) {
+                            true -> {
+                                if (selectSchema("cherry_english")) {
                                     setRuntimeOption("ascii_mode", false)
-                                } else if (!needsChineseSchema) {
-                                    // The engine is already in Chinese and will not emit a mode change.
-                                    service.lifecycleScope.launch { keyboardWindow.switchKeyboard("qwerty") }
+                                    cherryPreferences.edit().putBoolean("prediction", true).apply()
                                 }
                             }
 
-                            else -> {
-                                if (current.isNotBlank() && current != "cherry_english") {
-                                    cherryPreferences.edit().putString("chinese_schema", current).apply()
+                            false -> {
+                                if (selectSchema(chinese)) {
+                                    setRuntimeOption("ascii_mode", true)
+                                    cherryPreferences.edit().putBoolean("prediction", false).apply()
                                 }
-                                if (transferToEnglish && selectSchema("cherry_english")) {
-                                    if (rawInput.isNotEmpty() && !setRawInput(rawInput, rawInput.encodeToByteArray().size)) {
-                                        withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
+                            }
+
+                            null -> when {
+                                returnToChinese -> {
+                                    val needsChineseSchema = current == "cherry_english" || current.isBlank()
+                                    if (needsChineseSchema && !selectSchema(chinese)) {
+                                        refreshInputPanel()
+                                        return@updateCherryLanguagePanel
                                     }
-                                } else {
-                                    if (rawInput.isNotEmpty()) commitComposition()
                                     if (getRuntimeOption("ascii_mode")) {
-                                        service.lifecycleScope.launch { keyboardWindow.switchKeyboard("cherry_ascii") }
+                                        setRuntimeOption("ascii_mode", false)
+                                    } else if (!needsChineseSchema) {
+                                        // The engine is already in Chinese and will not emit a mode change.
+                                        service.lifecycleScope.launch { keyboardWindow.switchKeyboard("qwerty") }
+                                    }
+                                }
+
+                                else -> {
+                                    if (current.isNotBlank() && current != "cherry_english") {
+                                        cherryPreferences.edit().putString("chinese_schema", current).apply()
+                                    }
+                                    if (transferToEnglish && selectSchema("cherry_english")) {
+                                        if (rawInput.isNotEmpty() && !setRawInput(rawInput, rawInput.encodeToByteArray().size)) {
+                                            withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
+                                        }
                                     } else {
-                                        setRuntimeOption("ascii_mode", true)
+                                        if (rawInput.isNotEmpty()) commitComposition()
+                                        if (getRuntimeOption("ascii_mode")) {
+                                            service.lifecycleScope.launch { keyboardWindow.switchKeyboard("cherry_ascii") }
+                                        } else {
+                                            setRuntimeOption("ascii_mode", true)
+                                        }
                                     }
                                 }
                             }
                         }
+                        refreshInputPanel()
                     }
                 }
             }

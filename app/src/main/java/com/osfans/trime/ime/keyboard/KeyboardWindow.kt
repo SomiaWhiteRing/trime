@@ -6,6 +6,7 @@ package com.osfans.trime.ime.keyboard
 
 import android.graphics.Point
 import android.os.Build
+import android.os.Looper
 import android.text.InputType
 import android.view.View
 import android.view.WindowInsets
@@ -276,9 +277,9 @@ class KeyboardWindow(di: DI) :
 
     fun switchKeyboard(to: String) {
         val target = evalKeyboard(to)
-        ContextCompat.getMainExecutor(service).execute {
+        val change = Runnable {
             if (cachedKeyboards.containsKey(target)) {
-                if (target == currentKeyboardId) return@execute
+                if (target == currentKeyboardId) return@Runnable
             }
             val switchesCherryLanguage = "cherry_ascii" in presetKeyboardIds &&
                 target in cherryAlphabetKeyboards && currentKeyboardId in cherryAlphabetKeyboards &&
@@ -287,6 +288,11 @@ class KeyboardWindow(di: DI) :
             if (switchesCherryLanguage) cachedKeyboards[target]?.first?.resetShift()
             attachKeyboard(target)
             if (switchesCherryLanguage) currentKeyboardView?.invalidateAllKeys()
+        }
+        if (target in cherryAlphabetKeyboards && "cherry_ascii" in presetKeyboardIds && Looper.getMainLooper().isCurrentThread) {
+            change.run()
+        } else {
+            ContextCompat.getMainExecutor(service).execute(change)
         }
         Timber.d("Switched to keyboard: $target")
     }

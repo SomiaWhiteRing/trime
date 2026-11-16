@@ -70,6 +70,8 @@ interface RimeApi {
 
     suspend fun commitComposition(): Boolean
 
+    suspend fun refreshInputPanel()
+
     suspend fun clearComposition()
 
     suspend fun getComposition(): CompositionProto
