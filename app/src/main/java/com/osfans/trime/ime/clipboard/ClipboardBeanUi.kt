@@ -6,9 +6,13 @@
 package com.osfans.trime.ime.clipboard
 
 import android.content.Context
+import android.graphics.Path
+import android.graphics.Region
 import android.graphics.drawable.GradientDrawable
 import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.StaticLayout
+import android.text.TextPaint
 import android.text.TextUtils
 import android.text.style.ClickableSpan
 import android.view.Gravity
@@ -21,6 +25,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.osfans.trime.R
@@ -236,28 +241,32 @@ class ClipboardBeanUi(
         ).toString().removeSuffix("…")
         val span = object : ClickableSpan() {
             override fun onClick(widget: View) = onViewMore()
-            override fun updateDrawState(ds: android.text.TextPaint) {
-                ds.color = 0xFF9D1E42.toInt()
+            override fun updateDrawState(ds: TextPaint) {
+                ds.isUnderlineText = false
+                ds.color = ColorUtils.setAlphaComponent(textView.currentTextColor, 0x99)
             }
         }
         val clipped = SpannableStringBuilder(content.substring(0, start)).append(lastLine).append(suffix)
         val buttonStart = clipped.length - more.length
-        clipped.setSpan(span, buttonStart, clipped.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        clipped.setSpan(span, buttonStart, clipped.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         textView.text = clipped
+        val path = Path()
+        val hitArea = Region()
         textView.setOnTouchListener { _, event ->
+            if (event.actionMasked != MotionEvent.ACTION_DOWN && event.actionMasked != MotionEvent.ACTION_UP) {
+                return@setOnTouchListener true
+            }
             val current = textView.layout
-            val line = current.getLineForOffset(buttonStart)
             val x = event.x - textView.totalPaddingLeft
             val y = event.y - textView.totalPaddingTop
-            val hit = y >= current.getLineTop(line) && y < current.getLineBottom(line) &&
-                x in current.getPrimaryHorizontal(buttonStart)..current.getPrimaryHorizontal(clipped.length)
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> hit
-                MotionEvent.ACTION_UP -> {
-                    if (hit) span.onClick(textView)
-                    true
-                }
-                else -> true
+            current.getSelectionPath(buttonStart, clipped.length, path)
+            hitArea.setPath(path, Region(0, 0, current.width, current.height))
+            val hit = hitArea.contains(x.toInt(), y.toInt())
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                hit
+            } else {
+                if (hit) span.onClick(textView)
+                true
             }
         }
     }
