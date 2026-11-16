@@ -16,6 +16,7 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.KeyEvent
+import androidx.core.view.doOnPreDraw
 import com.mikepenz.iconics.IconicsDrawable
 import com.mikepenz.iconics.utils.sizeDp
 import com.osfans.trime.data.theme.ColorManager
@@ -135,11 +136,14 @@ class KeyView(
                         val actionBehavior = if (pressedIdx != -1 && pressedIdx != id) KeyBehavior.COMBO else behavior
                         key.getAction(actionBehavior)?.let { action ->
                             if (cherryLanguageArtwork != null && actionBehavior == KeyBehavior.CLICK) {
-                                // Draw the released key in its current mode before replacing the keyboard.
-                                postOnAnimation {
-                                    post {
-                                        if (isAttachedToWindow) processKeyAction(action, actionBehavior)
-                                    }
+                                val switchMode = {
+                                    if (isAttachedToWindow) processKeyAction(action, actionBehavior)
+                                }
+                                if (key.getLabel() == "En") {
+                                    // Draw the released language key before replacing the whole keyboard.
+                                    doOnPreDraw { releasedKey -> releasedKey.postOnAnimation(switchMode) }
+                                } else {
+                                    postOnAnimation { post(switchMode) }
                                 }
                             } else {
                                 processKeyAction(action, actionBehavior)
