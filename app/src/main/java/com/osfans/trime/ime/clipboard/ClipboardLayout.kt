@@ -27,6 +27,7 @@ import splitties.views.dsl.core.add
 import splitties.views.dsl.core.matchParent
 import splitties.views.dsl.core.view
 import splitties.views.dsl.core.wrapContent
+import kotlin.math.roundToInt
 
 @SuppressLint("ViewConstructor")
 class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(context) {
@@ -96,7 +97,7 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
         }
         val tabs = FlexboxLayout(context).apply {
             flexWrap = FlexWrap.WRAP
-            setPadding(dp(13), dp(13), dp(13), dp(13))
+            setPadding(dp(13), dp(13f + 2f / 3).roundToInt(), dp(13), dp(12f + 2f / 3).roundToInt())
             isClickable = true
             background = GradientDrawable().apply {
                 val radius = dp(20).toFloat()
@@ -116,7 +117,7 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
                 setPadding(dp(12), dp(4), dp(12), dp(4))
                 background = GradientDrawable().apply {
                     cornerRadius = dp(20).toFloat()
-                    setStroke(dp(1), if (selected) accent else 0xB8959697.toInt())
+                    setStroke(dp(1f / 3).roundToInt().coerceAtLeast(1), if (selected) accent else 0xB8959697.toInt())
                 }
                 setOnClickListener {
                     dismissTabChooser()
