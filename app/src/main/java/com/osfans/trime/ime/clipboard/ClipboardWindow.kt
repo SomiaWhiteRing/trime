@@ -5,11 +5,16 @@
 
 package com.osfans.trime.ime.clipboard
 
-import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.StateListDrawable
 import android.util.Patterns
 import android.view.Gravity
 import android.view.View
@@ -17,8 +22,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Switch
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -287,7 +292,6 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    @SuppressLint("UseSwitchCompatOrMaterialCode")
     private fun createClipboardSettings() = ScrollView(context).apply {
         setBackgroundColor(0xFF353535.toInt())
         isClickable = true
@@ -298,11 +302,13 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 "候选条展示复制内容" to prefs.clipboardSuggestion,
             )
             val controls = rows.map { (label, preference) ->
-                Switch(context).apply {
+                SwitchCompat(context).apply {
                     text = label
                     textSize = 14f
                     setTextColor(0xFFB3B3B3.toInt())
+                    isClickable = true
                     isChecked = preference.getValue()
+                    applyCherrySwitchArtwork(this)
                     setPadding(context.dp(14), 0, context.dp(14), 0)
                     addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(56)))
                 }
@@ -323,6 +329,40 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 setOnClickListener { deleteCurrentPage(0) }
             }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(56)))
         })
+    }
+
+    private fun applyCherrySwitchArtwork(toggle: SwitchCompat) {
+        val checked = intArrayOf(android.R.attr.state_checked)
+        val accent = 0xFF9D1E42.toInt()
+        val thumbSize = context.dp(11.4f).toInt()
+        val inset = context.dp(3.8f).toInt()
+        toggle.showText = false
+        toggle.switchMinWidth = context.dp(34)
+        toggle.thumbDrawable = StateListDrawable().apply {
+            listOf(Color.TRANSPARENT, accent).forEachIndexed { index, color ->
+                val thumb = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setSize(thumbSize, thumbSize)
+                    setColor(color)
+                }
+                addState(if (index == 0) checked else intArrayOf(), LayerDrawable(arrayOf(thumb)).apply {
+                    setLayerInset(0, inset, inset, inset, inset)
+                })
+            }
+        }
+        val trackOn = scope.drawable("clipboard-switch-on.png")
+        val trackOff = scope.drawable("clipboard-switch-off.png")
+        if (trackOn != null && trackOff != null) {
+            val tint = PorterDuffColorFilter(accent, PorterDuff.Mode.SRC_ATOP)
+            trackOn.colorFilter = tint
+            trackOff.colorFilter = tint
+            toggle.trackDrawable = StateListDrawable().apply {
+                addState(checked, trackOn)
+                addState(intArrayOf(), trackOff)
+            }
+        } else {
+            toggle.trackTintList = ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(accent, 0xFF777777.toInt()))
+        }
     }
 
     private val collectionPage by lazy {

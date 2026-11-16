@@ -26,6 +26,8 @@ if args.reference_apk:
         for state, resource_file in (("locked", "kqP.png"), ("unlocked", "WSD.png")):
             (assets / f"clipboard-lock-{state}.png").write_bytes(apk.read(f"res/{resource_file}"))
         (assets / "clipboard-footer-settings.png").write_bytes(apk.read("res/4ST.png"))
+        for state, resource_file in (("off", "73x.png"), ("on", "HNF.png")):
+            (assets / f"clipboard-switch-{state}.png").write_bytes(apk.read(f"res/{resource_file}"))
 
 if args.clipboard_reference:
     reference = Image.open(args.clipboard_reference).convert("RGBA")
