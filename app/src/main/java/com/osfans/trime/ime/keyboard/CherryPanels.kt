@@ -7,6 +7,7 @@ package com.osfans.trime.ime.keyboard
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -73,7 +74,12 @@ internal class CherryNumberWindow(
         }, 660, 527, 220, 175)
         cell(hitTarget(context, "退格") { key("BackSpace") }, 890, 2, 226, 175)
         val enter = label(context, enterKey.keyLabel, 14f) { key("Return") }.apply {
-            background = scope.drawable("cherry-number-enter.png")
+            val idle = scope.drawable("cherry-number-enter.png")
+            val pressed = scope.drawable("cherry-number-enter-pressed.png")
+            background = if (idle != null && pressed != null) StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_pressed), pressed)
+                addState(intArrayOf(), idle)
+            } else idle
             setPadding(0, 0, 0, context.dp(5))
         }
         cell(enter, 892, 177, 224, 175)

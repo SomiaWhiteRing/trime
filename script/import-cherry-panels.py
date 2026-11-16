@@ -81,6 +81,27 @@ for y in range(54, 107):
         weight = (x - 66) / 96
         enter.putpixel((x, y), tuple(round(a + (b - a) * weight) for a, b in zip(left, right)))
 enter.save(assets / "cherry-number-enter.png")
+sheet, index = config["STYLE242"]["hl_img"].split(",")
+tile = resource(f"res/{sheet}.til")[f"IMG{index}"]
+source_x, source_y, _, _ = map(int, tile["source_rect"].split(","))
+inner_x, inner_y, inner_width, inner_height = map(int, tile["inner_rect"].split(","))
+pressed = sprite(sheet, int(index)).convert("RGBA")
+inner_x -= source_x
+inner_y -= source_y
+xs = (0, inner_x, inner_x + inner_width, pressed.width)
+ys = (0, inner_y, inner_y + inner_height, pressed.height)
+scale = number.width / 1080
+dest_xs = (0, round(xs[1] * scale), enter.width - round((xs[3] - xs[2]) * scale), enter.width)
+dest_ys = (0, round(ys[1] * scale), enter.height - round((ys[3] - ys[2]) * scale), enter.height)
+pressed_enter = enter.convert("RGBA")
+for row in range(3):
+    for col in range(3):
+        patch = pressed.crop((xs[col], ys[row], xs[col + 1], ys[row + 1])).resize(
+            (dest_xs[col + 1] - dest_xs[col], dest_ys[row + 1] - dest_ys[row]),
+            Image.Resampling.BILINEAR,
+        )
+        pressed_enter.alpha_composite(patch, (dest_xs[col], dest_ys[row]))
+pressed_enter.save(assets / "cherry-number-enter-pressed.png")
 sidebar=number.crop((9,32,186,667))
 erase_labels(sidebar,(26,0,150,sidebar.height),149)
 sidebar.save(assets/'cherry-number-sidebar.png')
