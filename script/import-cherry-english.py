@@ -149,7 +149,9 @@ key_binder:
 """, encoding="utf-8")
     theme_path = directory / "baidu_cherry.trime.yaml"
     if theme_path.is_file():
-        configure_keyboard(theme_path)
+        theme = yaml.safe_load(theme_path.read_text(encoding="utf-8"))
+        configure_keyboard(theme)
+        theme_path.write_text(yaml.safe_dump(theme, allow_unicode=True, sort_keys=False), encoding="utf-8")
     pinyin_patch = directory / "luna_pinyin.custom.yaml"
     if pinyin_patch.is_file():
         config = yaml.safe_load(pinyin_patch.read_text(encoding="utf-8"))
@@ -160,8 +162,7 @@ key_binder:
     return (len(trie), len(offsets), len(records), len(entries))
 
 
-def configure_keyboard(theme_path):
-    theme = yaml.safe_load(theme_path.read_text(encoding="utf-8"))
+def configure_keyboard(theme):
     palette = theme["preset_color_schemes"]["baidu_cherry"]
     palette["hilited_candidate_back_color"] = "0x00000000"
     palette["hilited_candidate_text_color"] = "0xaa304e"
@@ -191,7 +192,6 @@ def configure_keyboard(theme_path):
         if key.get("click") == "CherryEnglishDirect":
             key.update(click="CherryEnglishComposing", label=presets["CherryEnglishComposing"]["label"])
     theme["preset_keyboards"]["cherry_english"] = composing
-    theme_path.write_text(yaml.safe_dump(theme, allow_unicode=True, sort_keys=False), encoding="utf-8")
 
 
 def import_candidate_arrow(reference, directory):

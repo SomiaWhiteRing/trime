@@ -5,6 +5,7 @@ import configparser
 import io
 import zipfile
 import re
+import runpy
 import yaml
 
 parser = argparse.ArgumentParser(description="Import locally captured CHERRY keyboard artwork and key bindings.")
@@ -327,5 +328,9 @@ keys["CherryTranslate"] = {
 for button in theme["tool_bar"]["buttons"]:
     if button["action"] == "CherryTranslate":
         button["foreground"]["option_styles"] = ["tool-translate.png", "tool-translate-on.png"]
+
+if "cherry_english" in theme["preset_keyboards"]:
+    english_importer = runpy.run_path(str(Path(__file__).with_name("import-cherry-english.py")))
+    english_importer["configure_keyboard"](theme)
 
 theme_path.write_text(yaml.safe_dump(theme, allow_unicode=True, sort_keys=False), encoding="utf-8")

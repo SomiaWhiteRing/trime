@@ -130,7 +130,18 @@ class KeyView(
                     KeyBehavior.CLICK -> {
                         val pressedIdx = keyboard.firstPressedKeyIndex
                         val actionBehavior = if (pressedIdx != -1 && pressedIdx != id) KeyBehavior.COMBO else behavior
-                        key.getAction(actionBehavior)?.let { processKeyAction(it, actionBehavior) }
+                        key.getAction(actionBehavior)?.let { action ->
+                            if (cherryLanguageArtwork != null && actionBehavior == KeyBehavior.CLICK) {
+                                // Draw the released key in its current mode before replacing the keyboard.
+                                postOnAnimation {
+                                    post {
+                                        if (isAttachedToWindow) processKeyAction(action, actionBehavior)
+                                    }
+                                }
+                            } else {
+                                processKeyAction(action, actionBehavior)
+                            }
+                        }
                     }
 
                     KeyBehavior.DOUBLE_CLICK, KeyBehavior.LAZY_DOUBLE_CLICK,
