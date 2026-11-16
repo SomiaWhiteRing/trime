@@ -8,6 +8,7 @@ package com.osfans.trime.ime.keyboard
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.LightingColorFilter
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -72,7 +73,10 @@ class KeyView(
             "cherry_english_disable" -> "abc-composing"
             else -> return@lazy null
         }
-        ColorManager.getDrawable("cherry-$name.png")
+        ColorManager.getDrawable("cherry-$name.png")?.mutate()?.apply {
+            // The BDS glyphs are unshaded; CHERRY's backgrounds already include the night-mode dimming.
+            colorFilter = LightingColorFilter(0xFFB3B3B3.toInt(), 0)
+        }
     }
 
     private val cachedLocation = intArrayOf(0, 0)
