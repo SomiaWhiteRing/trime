@@ -357,11 +357,11 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         super.getCurrentInputConnection()?.finishComposingText()
         composingText = ""
         postRimeJob { clearComposition() }
-        panel.open()
+        inputView?.setTranslationVisible(true)
     }
 
     internal fun closeTranslation() {
-        inputView?.translationPanel?.close()
+        inputView?.setTranslationVisible(false)
         composingText = ""
         postRimeJob { clearComposition() }
     }
@@ -568,7 +568,7 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         restarting: Boolean,
     ) {
         composingText = ""
-        inputView?.translationPanel?.close()
+        inputView?.setTranslationVisible(false)
         Timber.d("onStartInput: restarting=$restarting")
         val isNullType = attribute.inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_NULL
         postRimeJob {
@@ -631,7 +631,7 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
             finishComposingText()
             monitorCursorAnchor(false)
         }
-        inputView?.translationPanel?.close()
+        inputView?.setTranslationVisible(false)
         composingText = ""
         postRimeJob {
             clearComposition()

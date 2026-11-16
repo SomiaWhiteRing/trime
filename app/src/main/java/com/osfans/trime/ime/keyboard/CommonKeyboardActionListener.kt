@@ -137,7 +137,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                 if (shouldHandle) {
                     when (action.code) {
                         KeyEvent.KEYCODE_SWITCH_CHARSET -> handleSwitchCharset(action)
-                        KeyEvent.KEYCODE_EISU -> keyboardWindow.switchKeyboard(action.select)
+                        KeyEvent.KEYCODE_EISU -> handleKeyboardSwitch(action.select)
                         KeyEvent.KEYCODE_LANGUAGE_SWITCH -> handleLanguageSwitch(action)
                         KeyEvent.KEYCODE_FUNCTION -> handleFunctionCommand(action)
                         KeyEvent.KEYCODE_SETTINGS -> handleSettings(action)
@@ -146,6 +146,21 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                         KeyEvent.KEYCODE_VOICE_ASSIST -> switchToVoiceInputMethod()
                         else -> handleDefaultKeyAction(action)
                     }
+                }
+            }
+
+            private fun handleKeyboardSwitch(target: String) {
+                val catalog = if (target in setOf("number", "symbols") && "cherry_edit" in theme.presetKeyboards) {
+                    CherrySymbolCatalog.load()
+                } else {
+                    null
+                }
+                when {
+                    catalog == null -> keyboardWindow.switchKeyboard(target)
+                    target == "number" -> windowManager.attachWindow(CherryNumberWindow(di, catalog))
+                    else -> windowManager.attachWindow(CherrySymbolsWindow(di, catalog) {
+                        windowManager.attachWindow(KeyboardWindow)
+                    })
                 }
             }
 

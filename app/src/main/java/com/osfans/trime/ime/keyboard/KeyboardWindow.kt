@@ -202,6 +202,9 @@ class KeyboardWindow(di: DI) :
     }
 
     private fun smartMatchKeyboard(): String {
+        if ("cherry_ascii" in presetKeyboardIds && rime.run { statusCached }.isAsciiMode) {
+            return "cherry_ascii"
+        }
         // 主题的布局中包含方案id，直接采用
         val currentSchema = rime.run { statusCached }.schemaId
         if (presetKeyboardIds.contains(currentSchema)) {
@@ -406,9 +409,11 @@ class KeyboardWindow(di: DI) :
                 }
             }
 
-            option == "ascii_mode" && !value.value -> {
-                // 回到中文时，释放 Shift 锁定
-                activeKeyboard?.resetShift()
+            option == "ascii_mode" -> {
+                if (!value.value) activeKeyboard?.resetShift()
+                if ("cherry_ascii" in presetKeyboardIds && currentKeyboardId in setOf("default", "qwerty", "cherry_ascii")) {
+                    switchKeyboard(if (value.value) "cherry_ascii" else "qwerty")
+                }
             }
         }
         currentKeyboardView?.invalidateAllKeys()

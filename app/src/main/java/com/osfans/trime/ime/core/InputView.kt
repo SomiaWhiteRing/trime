@@ -166,6 +166,11 @@ class InputView(
 
     internal val translationPanel = InlineTranslationPanel(themedContext, service::closeTranslation, service::insertTranslation)
 
+    internal fun setTranslationVisible(visible: Boolean) {
+        if (visible) translationPanel.open() else translationPanel.close()
+        inputBar.setTranslationVisible(visible && translationPanel.inputConnection != null)
+    }
+
     val keyboardView: View
 
     /** Restyles colors after a scheme switch without rebuilding the view tree. */

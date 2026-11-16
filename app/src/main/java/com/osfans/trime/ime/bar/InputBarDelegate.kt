@@ -366,6 +366,10 @@ class InputBarDelegate(override val di: DI) :
      * options. Rime access stays here in the delegate: the buttons themselves
      * are pure views and only react to [updateButtonsStyle].
      */
+    internal fun setTranslationVisible(visible: Boolean) {
+        alwaysUi.updateButtonsStyle("cherry_translation", visible)
+    }
+
     private fun syncToolbarOptionStates() {
         val options = alwaysUi.toggleOptions()
         if (options.isEmpty()) return

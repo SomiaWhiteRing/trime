@@ -193,7 +193,9 @@ class PopupKeyboardUi(
 
     private val keyUis = labels.map { label ->
         val displayLabel =
-            if (label.length == 1 && label[0].code < 128) {
+            if (label.startsWith("CherryHold")) {
+                theme.presetKeys[label]?.label.orEmpty()
+            } else if (label.length == 1 && label[0].code < 128) {
                 label
             } else {
                 theme.resolveAction(label).getLabel(KeyboardWindow.currentKeyboard).let {

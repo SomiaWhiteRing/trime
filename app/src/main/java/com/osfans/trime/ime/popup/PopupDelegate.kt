@@ -113,12 +113,18 @@ class PopupDelegate(override val di: DI) : DIAware {
     }
 
     private fun showKeyboard(viewId: Int, keys: List<String>, bounds: Rect) {
-        // clear popup preview text         OR create empty popup preview
-        showingEntryUi[viewId]?.setText("") ?: showPopup(viewId, "", bounds)
-        reallyShowKeyboard(viewId, keys, bounds)
+        val cherryChoices = keys.firstOrNull()?.startsWith("CherryHold") == true
+        if (cherryChoices) {
+            dismissJobs.remove(viewId)?.cancel()
+            showingEntryUi[viewId]?.let { dismissPopupEntry(viewId, it) }
+        } else {
+            // Keep the standard preview under the standard popup keyboard.
+            showingEntryUi[viewId]?.setText("") ?: showPopup(viewId, "", bounds)
+        }
+        reallyShowKeyboard(viewId, keys, bounds, cherryChoices)
     }
 
-    private fun reallyShowKeyboard(viewId: Int, keys: List<String>, bounds: Rect) {
+    private fun reallyShowKeyboard(viewId: Int, keys: List<String>, bounds: Rect, cherryChoices: Boolean) {
         val labels = keys
         val keyboardUi = PopupKeyboardUi(
             context,
@@ -126,7 +132,7 @@ class PopupDelegate(override val di: DI) : DIAware {
             rootBounds,
             bounds,
             { dismissPopup(viewId) },
-            popupRadius,
+            if (cherryChoices) context.dp(4f) else popupRadius,
             popupWidth,
             popupKeyHeight,
             // position popup keyboard higher, because of [^1]
