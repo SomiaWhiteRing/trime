@@ -303,14 +303,14 @@ class KeyView(
         if (languageArtwork != null) {
             val scale = keyboardView.width / 1080f
             val offsetX = when (label) {
-                "En" -> 0f
+                "En" -> 1f
                 "中" -> 1f
                 else -> 2f
             }
-            val offsetY = if (label == "En" || label == "中") 15f else 15.5f
+            val offsetY = 15f
             val x = (width + paddingLeft - paddingRight) / 2f + offsetX * scale
             val y = (height + paddingTop - paddingBottom) / 2f - offsetY * scale
-            drawCherrySprite(canvas, languageArtwork, x, y, scale)
+            drawCherrySprite(canvas, languageArtwork, x, y, scale, truncateSize = true)
         } else if (!drawCherryShift(canvas) && label.isNotEmpty()) {
             drawLabel(canvas, label)
         }
@@ -339,9 +339,11 @@ class KeyView(
         return true
     }
 
-    private fun drawCherrySprite(canvas: Canvas, sprite: Drawable, x: Float, y: Float, scale: Float) {
-        val w = (sprite.intrinsicWidth * scale).roundToInt()
-        val h = (sprite.intrinsicHeight * scale).roundToInt()
+    private fun drawCherrySprite(canvas: Canvas, sprite: Drawable, x: Float, y: Float, scale: Float, truncateSize: Boolean = false) {
+        val scaledWidth = sprite.intrinsicWidth * scale
+        val scaledHeight = sprite.intrinsicHeight * scale
+        val w = if (truncateSize) scaledWidth.toInt() else scaledWidth.roundToInt()
+        val h = if (truncateSize) scaledHeight.toInt() else scaledHeight.roundToInt()
         val left = (x - w / 2f).roundToInt()
         val top = (y - h / 2f).roundToInt()
         sprite.setBounds(left, top, left + w, top + h)
