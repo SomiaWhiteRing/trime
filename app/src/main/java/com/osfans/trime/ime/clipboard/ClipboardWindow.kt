@@ -256,6 +256,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
         viewPager.apply {
             adapter = clipboardPagesAdapter
+            isUserInputEnabled = !usesCherryLayout
         }
         titleUi.apply {
             tabLayout.onConfigureTab(viewPager) { tabUi, position ->
