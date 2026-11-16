@@ -24,6 +24,7 @@ import splitties.views.dsl.constraintlayout.bottomOfParent
 import splitties.views.dsl.constraintlayout.centerVertically
 import splitties.views.dsl.constraintlayout.constraintLayout
 import splitties.views.dsl.constraintlayout.endOfParent
+import splitties.views.dsl.constraintlayout.startOfParent
 import splitties.views.dsl.constraintlayout.lParams
 import splitties.views.dsl.core.Ui
 import splitties.views.dsl.core.add
@@ -71,7 +72,12 @@ class ClipboardBeanUi(
     private val actions = LinearLayout(ctx).apply {
         visibility = View.GONE
     }
-    private val checkbox = CheckBox(ctx).apply { visibility = View.GONE }
+    private val checkbox = CheckBox(ctx).apply {
+        visibility = View.GONE
+        buttonTintList = null
+        setButtonDrawable(R.drawable.cherry_clipboard_checkbox)
+        background = null
+    }
 
     private val layout =
         constraintLayout {
@@ -95,7 +101,7 @@ class ClipboardBeanUi(
                     centerVertically()
                 })
                 add(checkbox, lParams(dp(34), dp(39)) {
-                    endOfParent()
+                    startOfParent(dp(11))
                     centerVertically()
                 })
             }
@@ -128,6 +134,7 @@ class ClipboardBeanUi(
     fun bindExpansion(preview: String, content: String, entries: List<Triple<Int, String, () -> Unit>>) {
         checkbox.visibility = View.GONE
         expand.visibility = View.VISIBLE
+        textView.setPaddingDp(8, 8, 37, 8)
         actions.removeAllViews()
         for ((label, icon, action) in entries) {
             actions.addView(LinearLayout(ctx).apply {
@@ -165,6 +172,7 @@ class ClipboardBeanUi(
         actions.visibility = View.GONE
         expand.visibility = View.GONE
         textView.maxLines = 1
+        textView.setPaddingDp(41, 8, 37, 8)
         checkbox.visibility = View.VISIBLE
         checkbox.isChecked = selected
         checkbox.setOnClickListener { toggle() }

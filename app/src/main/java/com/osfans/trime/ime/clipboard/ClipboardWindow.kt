@@ -346,6 +346,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         selectionAll = CheckBox(context).apply {
             setText(R.string.cherry_clipboard_select_all)
             setTextColor(0xFFB3B3B3.toInt())
+            buttonTintList = null
+            setButtonDrawable(R.drawable.cherry_clipboard_checkbox)
+            setPaddingRelative(context.dp(6), paddingTop, paddingEnd, paddingBottom)
             setOnClickListener {
                 val select = isChecked
                 val filter = category.value
