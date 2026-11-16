@@ -819,20 +819,20 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 }
             }
             clipboardLayout.doOnPreDraw { layout ->
-                layout.post {
-                    if (!layout.isAttachedToWindow) return@post
+                layout.postOnAnimation {
+                    if (!layout.isAttachedToWindow) return@postOnAnimation
                     clipboardLayout.titleUi.tabLayout.alpha = 1f
                     clipboardLayout.viewPager.alpha = 1f
                     if (opensHistory) {
-                        // The original draws the tabs, filters and empty counter before its history.
+                        // Keep the filters and empty counter visible before showing the loaded history.
                         layout.doOnPreDraw {
-                            layout.post {
+                            layout.postDelayed({
                                 if (layout.isAttachedToWindow) {
                                     showHistory = true
                                     clipboardPage.recyclerView.alpha = 1f
                                     updateHistoryCount(historyItems)
                                 }
-                            }
+                            }, 100L)
                         }
                     }
                 }
