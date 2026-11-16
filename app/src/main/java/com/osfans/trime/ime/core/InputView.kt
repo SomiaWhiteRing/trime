@@ -23,6 +23,7 @@ import com.osfans.trime.core.RimeMessage
 import com.osfans.trime.daemon.RimeSession
 import com.osfans.trime.data.prefs.AppPrefs
 import com.osfans.trime.data.theme.Theme
+import com.osfans.trime.data.theme.ThemeManager
 import com.osfans.trime.data.theme.ThemeScope
 import com.osfans.trime.ime.bar.InputBarDelegate
 import com.osfans.trime.ime.broadcast.EnterKeyDisplayDelegate
@@ -295,6 +296,9 @@ class InputView(
     private fun updateKeyboardSize() {
         bottomPaddingSpace.updateLayoutParams {
             height = keyboardBottomPaddingPx
+        }
+        if (ThemeManager.isCherryThemeActive) {
+            bottomPaddingSpace.setBackgroundColor(0xff0d0d0d.toInt())
         }
         val sidePadding = keyboardSidePaddingPx
         val unset = LayoutParams.UNSET

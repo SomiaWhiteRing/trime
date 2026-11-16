@@ -177,6 +177,7 @@ symbol.save(assets/'cherry-symbol-panel.png')
 
 theme_path=theme_dir/'baidu_cherry.trime.yaml'
 theme=yaml.safe_load(theme_path.read_text(encoding='utf-8'))
+theme['style']['keyboard_padding_bottom'] = 8
 keys=theme['preset_keys']
 keys['CherryQuickSymbols']={'label':'符','send':'FUNCTION','command':'liquid_keyboard','option':'emoji'}
 keys['CherryDeleteWord']={'label':'','send':'Control+BackSpace'}
