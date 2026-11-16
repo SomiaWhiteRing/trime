@@ -9,7 +9,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -95,6 +98,28 @@ class ClipboardLayout(
         return true
     }
 
+    private fun chooserBackground(): Drawable {
+        val left = scope.drawable("clipboard-chooser-corner-left.png")
+        val right = scope.drawable("clipboard-chooser-corner-right.png")
+        val color = 0xFF434343.toInt()
+        val radius = context.dp(20)
+        if (left == null || right == null) {
+            return GradientDrawable().apply {
+                val r = radius.toFloat()
+                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r)
+                setColor(color)
+            }
+        }
+        return LayerDrawable(arrayOf(ColorDrawable(color), ColorDrawable(color), left, right)).apply {
+            setLayerInset(0, 0, 0, 0, radius)
+            setLayerInset(1, radius, 0, radius, 0)
+            setLayerSize(2, radius, radius)
+            setLayerSize(3, radius, radius)
+            setLayerGravity(2, Gravity.LEFT or Gravity.BOTTOM)
+            setLayerGravity(3, Gravity.RIGHT or Gravity.BOTTOM)
+        }
+    }
+
     fun toggleTabChooser(labels: List<Int>) {
         if (tabChooser != null) {
             dismissTabChooser()
@@ -106,13 +131,9 @@ class ClipboardLayout(
         }
         val tabs = FlexboxLayout(context).apply {
             flexWrap = FlexWrap.WRAP
-            setPadding(dp(13), dp(13f + 2f / 3).roundToInt(), dp(13), dp(13))
             isClickable = true
-            background = GradientDrawable().apply {
-                val radius = dp(20).toFloat()
-                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, radius, radius, radius, radius)
-                setColor(0xFF434343.toInt())
-            }
+            background = chooserBackground()
+            setPadding(dp(13), dp(13f + 2f / 3).roundToInt(), dp(13), dp(13))
         }
         labels.forEachIndexed { index, label ->
             val selected = index == viewPager.currentItem

@@ -112,6 +112,14 @@ for selected, capture in args.clipboard_chooser_tabs:
     reference = Image.open(capture).convert("RGB")
     if reference.size != (1116, 184):
         raise ValueError("Expected a CHERRY chooser crop at 1116 x 184")
+    if selected == "phrases":
+        # These margins show the undisturbed dimmed pane (43) under the gray shell (67).
+        for side, left, right in (("left", 0, 60), ("right", 1056, 1116)):
+            corner = reference.crop((left, 120, right, 180)).convert("L")
+            mask = corner.point(lambda level: max(0, min(255, round((level - 43) * 255 / 24))))
+            artwork = Image.new("RGBA", corner.size, (67, 67, 67))
+            artwork.putalpha(mask)
+            artwork.save(assets / f"clipboard-chooser-corner-{side}.png")
     for name, (left, right) in chooser_bounds.items():
         state = "active" if selected == name else "idle"
         reference.crop((left, 42, right, 123)).save(assets / f"clipboard-chooser-{name}-{state}.png")
