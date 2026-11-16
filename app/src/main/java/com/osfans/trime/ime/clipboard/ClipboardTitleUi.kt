@@ -126,7 +126,7 @@ internal class CherryClipboardTabBackground(context: Context) : Drawable() {
     private val overhang = context.dp(8f)
     private val rightExtension = context.dp(4f / 3f)
     private val topInset = context.dp(1f / 3f)
-    private val bottomInset = context.dp(2f / 3f)
+    private val bottomInset = context.dp(1f / 6f)
     private val path = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var opacity = 255
