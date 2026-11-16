@@ -144,6 +144,7 @@ internal class CherryClipboardTabBackground(context: Context) : Drawable() {
     private val curveWidth = context.dp(15f)
     private val divider = context.dp(0.5f)
     private val overhang = context.dp(8f)
+    private val leftExtension = context.dp(1f / 3f)
     private val rightExtension = context.dp(4f / 3f)
     private val topInset = context.dp(1f / 3f)
     private val bottomInset = context.dp(1f / 6f)
@@ -152,7 +153,7 @@ internal class CherryClipboardTabBackground(context: Context) : Drawable() {
     private var opacity = 255
 
     override fun onBoundsChange(bounds: Rect) {
-        val left = bounds.left - overhang
+        val left = bounds.left - overhang - leftExtension
         val right = bounds.right + overhang + rightExtension
         val top = bounds.top + divider + topInset
         val bottom = bounds.bottom - divider - bottomInset
@@ -178,7 +179,7 @@ internal class CherryClipboardTabBackground(context: Context) : Drawable() {
         val inset = curveWidth.coerceAtMost(bounds.width() / 2f)
         val top = bounds.top + divider + topInset
         paint.strokeWidth = divider * 1.5f
-        canvas.drawLine(bounds.left - overhang + inset, top, bounds.right + overhang + rightExtension - inset, top, paint)
+        canvas.drawLine(bounds.left - overhang - leftExtension + inset, top, bounds.right + overhang + rightExtension - inset, top, paint)
     }
 
     override fun setAlpha(alpha: Int) {
