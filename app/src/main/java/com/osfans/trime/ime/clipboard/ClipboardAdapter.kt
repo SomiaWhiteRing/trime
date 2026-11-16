@@ -6,10 +6,13 @@
 package com.osfans.trime.ime.clipboard
 
 import android.os.Build
+import android.util.DisplayMetrics
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import com.osfans.trime.R
 import com.osfans.trime.data.db.DatabaseBean
@@ -124,6 +127,21 @@ abstract class ClipboardAdapter(
                         if (previous >= 0) notifyItemChanged(previous)
                     }
                     notifyItemChanged(position)
+                    if (expandedClipboardId != null) {
+                        val list = holder.itemView.parent as RecyclerView
+                        val layout = list.layoutManager as LinearLayoutManager
+                        val lastVisible = layout.findLastCompletelyVisibleItemPosition()
+                        if (position == itemCount - 1 ||
+                            lastVisible != RecyclerView.NO_POSITION && position >= lastVisible
+                        ) {
+                            layout.startSmoothScroll(object : LinearSmoothScroller(list.context) {
+                                override fun getVerticalSnapPreference() = SNAP_TO_END
+
+                                override fun calculateSpeedPerPixel(displayMetrics: DisplayMetrics) =
+                                    100f / displayMetrics.densityDpi
+                            }.apply { targetPosition = position })
+                        }
+                    }
                 }
             }
             root.setOnClickListener {
