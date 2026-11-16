@@ -11,6 +11,7 @@ import android.view.View
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.paging.LoadState
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.recyclerview.widget.RecyclerView
@@ -33,6 +34,8 @@ import com.osfans.trime.ime.window.BoardWindow
 import com.osfans.trime.ime.window.BoardWindowManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kodein.di.DI
 import org.kodein.di.instance
@@ -114,12 +117,38 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
 
     private var candidatesSubmitJob: Job? = null
 
+    internal fun open() {
+        if (!usesCherryLayout) {
+            windowManager.attachWindow(this)
+            return
+        }
+        val compactItems = compactCandidate.adapter.items
+        val keyboard by instance<KeyboardWindow>()
+        service.lifecycleScope.launch {
+            startCandidatePaging(service.lifecycleScope)
+            adapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
+            if (adapter.itemCount > 0 && windowManager.isAttached(keyboard) && compactCandidate.adapter.items === compactItems) {
+                windowManager.attachWindow(this@BaseUnrolledCandidateWindow)
+            } else {
+                candidatesSubmitJob?.cancel()
+            }
+        }
+    }
+
+    private fun startCandidatePaging(scope: LifecycleCoroutineScope) {
+        candidatesSubmitJob = scope.launch {
+            candidatesPager.flow.collectLatest {
+                adapter.submitData(it)
+            }
+        }
+    }
+
     override fun onAttached() {
         lifecycleCoroutineScope = candidateLayout.findViewTreeLifecycleOwner()!!.lifecycleScope
         bar.unrollButtonStateMachine.push(UnrollButtonStateMachine.TransitionEvent.UnrolledCandidatesAttached)
         offsetJob =
             lifecycleCoroutineScope.launch {
-                compactCandidate.unrolledCandidateOffset.collect {
+                compactCandidate.unrolledCandidateOffset.drop(if (usesCherryLayout) 1 else 0).collect {
                     if (it <= 0) {
                         windowManager.attachWindow(KeyboardWindow)
                     } else {
@@ -131,12 +160,7 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
                     }
                 }
             }
-        candidatesSubmitJob =
-            lifecycleCoroutineScope.launch {
-                candidatesPager.flow.collectLatest {
-                    adapter.submitData(it)
-                }
-            }
+        if (!usesCherryLayout) startCandidatePaging(lifecycleCoroutineScope)
     }
 
     fun bindCandidateUiViewHolder(holder: CandidateViewHolder) {

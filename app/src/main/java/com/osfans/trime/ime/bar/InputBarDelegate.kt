@@ -210,7 +210,7 @@ class InputBarDelegate(override val di: DI) :
 
     private fun setUnrollButtonToAttach() {
         candidateUi.unrollButton.setOnClickListener {
-            windowManager.attachWindow(FlexboxUnrolledCandidateWindow(di))
+            FlexboxUnrolledCandidateWindow(di).open()
         }
         candidateUi.setUnrolled(false)
     }
