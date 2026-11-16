@@ -175,7 +175,7 @@ if args.clipboard_send_mode_panel:
         reference = Image.open(capture).convert("RGB")
         if reference.size != (1116, 826):
             raise ValueError("Expected a CHERRY send-mode panel crop at 1116 x 826")
-        reference.crop((0, 1, 1116, 116)).save(assets / "clipboard-send-mode-title.png")
+        reference.crop((0, 1, 1116, 107)).save(assets / "clipboard-send-mode-title.png")
         for name, top in (("manual", 116), ("automatic", 327)):
             state = "active" if selected == name else "idle"
             reference.crop((0, top, 1116, top + 211)).save(assets / f"clipboard-send-mode-{name}-{state}.png")

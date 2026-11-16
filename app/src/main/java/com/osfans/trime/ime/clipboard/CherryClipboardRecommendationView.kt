@@ -263,7 +263,8 @@ internal class CherryClipboardRecommendationView(
     }
 
     private fun sendNext() {
-        val phrase = categories[selected].phrases.getOrNull(sequenceIndex) ?: return
+        val phrases = categories[selected].phrases
+        val phrase = phrases.getOrNull(sequenceIndex) ?: return
         if (undoStagedPhrase == null) {
             undoStagedPhrase = stage(phrase) ?: return
         }
@@ -272,7 +273,12 @@ internal class CherryClipboardRecommendationView(
             return
         }
         undoStagedPhrase = null
-        sequenceIndex++
+        sequenceIndex = (sequenceIndex + 1) % phrases.size
+        if (sequenceIndex == 0) {
+            renderCards()
+            cardsScroll.scrollTo(0, 0)
+            return
+        }
         redrawAtCurrentScroll()
         cardsScroll.post {
             cards.getChildAt(sequenceIndex)?.requestRectangleOnScreen(android.graphics.Rect(

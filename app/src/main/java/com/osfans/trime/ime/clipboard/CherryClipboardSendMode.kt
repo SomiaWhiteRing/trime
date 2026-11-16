@@ -30,7 +30,7 @@ internal fun createCherrySendModePanel(
     close: () -> Unit,
     select: (CherrySendMode) -> Unit,
 ): View = LinearLayout(context).apply {
-    val surface = 0xFF353535.toInt()
+    val surface = 0xFF363636.toInt()
     val labelColor = 0xFFB3B3B3.toInt()
     val accent = 0xFFA21E42.toInt()
     val radius = context.dp(20f)
@@ -64,11 +64,11 @@ internal fun createCherrySendModePanel(
         }, FrameLayout.LayoutParams(context.dp(38), context.dp(34), Gravity.END or Gravity.BOTTOM).apply {
             marginEnd = context.dp(10)
         })
-    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(38f + 1f / 3).roundToInt()))
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(35f + 1f / 3).roundToInt()))
 
     val choices = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, 0, 0, context.dp(8))
+        setPadding(0, context.dp(3), 0, context.dp(8))
     }
     CherrySendMode.entries.forEach { mode ->
         choices.addView(FrameLayout(context).apply {
