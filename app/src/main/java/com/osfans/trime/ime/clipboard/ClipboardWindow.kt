@@ -5,6 +5,7 @@
 
 package com.osfans.trime.ime.clipboard
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -15,6 +16,8 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Switch
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.Pager
@@ -251,6 +254,19 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                                     updateLock()
                                 }
                                 addView(lock, FrameLayout.LayoutParams(context.dp(61), FrameLayout.LayoutParams.MATCH_PARENT))
+                                addView(
+                                    ImageView(context).apply {
+                                        scaleType = ImageView.ScaleType.CENTER_INSIDE
+                                        contentDescription = "设置"
+                                        setImageDrawable(scope.drawable("clipboard-footer-settings.png"))
+                                        if (drawable == null) setImageResource(android.R.drawable.ic_menu_preferences)
+                                        imageTintList = ColorStateList.valueOf(0xFFB3B3B3.toInt())
+                                        setOnClickListener { clipboardLayout.showSettings(createClipboardSettings()) }
+                                    },
+                                    FrameLayout.LayoutParams(context.dp(44), FrameLayout.LayoutParams.MATCH_PARENT).apply {
+                                        marginStart = context.dp(96)
+                                    },
+                                )
                             },
                             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(37)),
                         )
@@ -269,6 +285,44 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             label.setTextColor(if (selected) 0xFFC51640.toInt() else scope.colors.keyTextColor)
             label.paint.isUnderlineText = selected
         }
+    }
+
+    @SuppressLint("UseSwitchCompatOrMaterialCode")
+    private fun createClipboardSettings() = ScrollView(context).apply {
+        setBackgroundColor(0xFF353535.toInt())
+        isClickable = true
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            val rows = listOf(
+                "启用剪贴板" to prefs.clipboardListening,
+                "候选条展示复制内容" to prefs.clipboardSuggestion,
+            )
+            val controls = rows.map { (label, preference) ->
+                Switch(context).apply {
+                    text = label
+                    textSize = 14f
+                    setTextColor(0xFFB3B3B3.toInt())
+                    isChecked = preference.getValue()
+                    setPadding(context.dp(14), 0, context.dp(14), 0)
+                    addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(56)))
+                }
+            }
+            controls[1].isEnabled = controls[0].isChecked
+            controls.forEachIndexed { index, toggle ->
+                toggle.setOnCheckedChangeListener { _, enabled ->
+                    rows[index].second.setValue(enabled)
+                    if (index == 0) controls[1].isEnabled = enabled
+                }
+            }
+            addView(TextView(context).apply {
+                text = "清空剪贴板"
+                textSize = 14f
+                gravity = Gravity.CENTER_VERTICAL
+                setTextColor(0xFFB3B3B3.toInt())
+                setPadding(context.dp(14), 0, context.dp(14), 0)
+                setOnClickListener { deleteCurrentPage(0) }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(56)))
+        })
     }
 
     private val collectionPage by lazy {
@@ -297,7 +351,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             tabLayout.onConfigureTab(viewPager) { tabUi, position ->
                 configureTab(tabUi, position)
             }
-            backButton?.setOnClickListener { windowManager.attachWindow(KeyboardWindow) }
+            backButton?.setOnClickListener {
+                if (!dismissSettings()) windowManager.attachWindow(KeyboardWindow)
+            }
             actionButton.setOnClickListener {
                 if (usesCherryLayout) {
                     toggleTabChooser(tabLabels)

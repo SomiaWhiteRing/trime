@@ -9,6 +9,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -31,6 +32,7 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
 
     val titleUi = ClipboardTitleUi(context, scope)
     private var tabChooser: FrameLayout? = null
+    private var settings: View? = null
 
     init {
         add(
@@ -49,6 +51,21 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
     private fun dismissTabChooser() {
         tabChooser?.let(::removeView)
         tabChooser = null
+    }
+
+    fun showSettings(content: View) {
+        dismissTabChooser()
+        settings = content
+        titleUi.setSettingsOpen(true)
+        add(content, lParams { centerInParent() })
+    }
+
+    fun dismissSettings(): Boolean {
+        val content = settings ?: return false
+        removeView(content)
+        settings = null
+        titleUi.setSettingsOpen(false)
+        return true
     }
 
     fun toggleTabChooser(labels: List<Int>) {

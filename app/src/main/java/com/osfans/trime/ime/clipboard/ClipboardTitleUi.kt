@@ -14,6 +14,7 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.view.View
+import android.widget.TextView
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
@@ -61,6 +62,18 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     )
 
     private val size = theme.style.run { candidateViewHeight + commentHeight }
+    private val settingsTitle = TextView(ctx).apply {
+        setText(R.string.clipboard)
+        textSize = 14f
+        setTextColor(0xFFB3B3B3.toInt())
+        visibility = View.GONE
+    }
+
+    fun setSettingsOpen(open: Boolean) {
+        tabLayout.visibility = if (open) View.GONE else View.VISIBLE
+        actionButton.visibility = if (open) View.GONE else View.VISIBLE
+        settingsTitle.visibility = if (open) View.VISIBLE else View.GONE
+    }
 
     override val root = constraintLayout {
         if (cherry) {
@@ -84,6 +97,12 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
                 centerVertically()
             },
         )
+        if (cherry) {
+            add(settingsTitle, lParams(wrapContent, wrapContent) {
+                startOfParent(dp(47))
+                centerVertically()
+            })
+        }
         backButton?.let {
             add(it, lParams(dp(37), dp(37)) {
                 startOfParent()
