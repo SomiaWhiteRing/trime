@@ -331,6 +331,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             tabUi.root.minimumHeight = context.dp(35)
             tabUi.activeStyle = { active ->
                 tabUi.label.paint.isFakeBoldText = active
+                tabUi.label.scaleX = if (active) 0.95f else 0.98f
+                tabUi.label.scaleY = if (active) 0.98f else 1f
+                tabUi.label.translationX = if (position == 0) context.dp(1f / 3) else 0f
+                tabUi.label.translationY = context.dp(0.75f)
                 tabUi.label.setTextColor(if (active) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt())
                 tabUi.root.background = if (active) {
                     CherryClipboardTabBackground(context.dp(15f), context.dp(0.5f), context.dp(8f))
