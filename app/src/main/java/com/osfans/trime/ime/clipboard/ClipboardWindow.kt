@@ -106,7 +106,12 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         LINK(R.string.cherry_clipboard_link, "链接"),
     }
 
-    private data class PhraseFilter(val text: String, val width: Int? = null, val artwork: String? = null) {
+    private data class PhraseFilter(
+        val text: String,
+        val width: Int? = null,
+        val artwork: String? = null,
+        val groupId: String? = null,
+    ) {
         companion object {
             val FAVORITES = PhraseFilter("收藏", 45, "favorites")
             val RECENT = PhraseFilter("最近", 45, "recent")
@@ -116,7 +121,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
     private val phraseFilters by lazy {
         listOf(PhraseFilter.FAVORITES, PhraseFilter.RECENT, PhraseFilter.DEFAULT) +
-            CherryPhraseGroups.names(context).map { PhraseFilter(it) }
+            CherryPhraseGroups.all(context).map { PhraseFilter(it.title, groupId = it.id) }
     }
     private val phraseFilter = MutableStateFlow(PhraseFilter.DEFAULT)
     private var displayedPhrases = emptyList<DatabaseBean>()
@@ -939,7 +944,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     contentDescription = context.getText(R.string.cherry_clipboard_phrases)
                     setImageDrawable(scope.drawable("clipboard-phrase-library-entry.png"))
                     if (drawable == null) setImageResource(android.R.drawable.ic_menu_preferences)
-                    setOnClickListener { openPhraseLibrary(phraseFilter.value.takeIf { it.artwork == null }?.text) }
+                    setOnClickListener { openPhraseLibrary(phraseFilter.value.groupId) }
                 }, LinearLayout.LayoutParams(context.dp(39), LinearLayout.LayoutParams.MATCH_PARENT))
                 select(phraseFilter.value)
                 val filterStrip = HorizontalScrollView(context).apply {
@@ -978,7 +983,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                                             }
                                             setTextColor(if (artwork == null) 0xFFB3B3B3.toInt() else Color.TRANSPARENT)
                                             setOnClickListener {
-                                                val group = phraseFilter.value.text
+                                                val group = phraseFilter.value.groupId
                                                 if (label == R.string.cherry_library_add_phrase) CherryPhraseEditorActivity.open(context, group)
                                                 else openPhraseLibrary(group)
                                             }
@@ -1276,7 +1281,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                             PhraseFilter.DEFAULT -> grouped[null].orEmpty()
                             PhraseFilter.FAVORITES -> records.filter { it.pinned }
                             PhraseFilter.RECENT -> ids.mapNotNull(byId::get)
-                            else -> grouped[item.text].orEmpty()
+                            else -> grouped[item.groupId].orEmpty()
                         }
                     }
                     displayedPhrases = phraseGroups[filter].orEmpty()

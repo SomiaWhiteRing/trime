@@ -34,7 +34,7 @@ class CherryPhraseEditorActivity : Activity() {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         val group = intent.getStringExtra(GROUP)
-        if (group != null && group !in CherryPhraseGroups.names(this)) {
+        if (group != null && CherryPhraseGroups.all(this).none { it.id == group }) {
             finish()
             return
         }

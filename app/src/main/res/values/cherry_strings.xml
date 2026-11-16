@@ -25,6 +25,10 @@
     <string name="cherry_library_manage_phrases">Manage common phrases</string>
     <string name="cherry_library_phrase_hint">Enter phrase content</string>
     <string name="cherry_library_save_phrase">Save</string>
+    <string name="cherry_library_group_settings">Group settings</string>
+    <string name="cherry_library_rename_group">Rename group</string>
+    <string name="cherry_library_favorites_folder">Favorites folder</string>
+    <string name="cherry_library_create_group">+ Create group</string>
     <string name="cherry_library_default">Default group</string>
     <string name="cherry_library_add_group">Add group</string>
     <string name="cherry_library_group_hint">Enter a group name, up to 6 characters</string>

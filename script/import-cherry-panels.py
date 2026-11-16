@@ -78,6 +78,7 @@ if args.clipboard_phrase_library:
     if library.size != (1116, 2480) or filters.size != (1116, 826):
         raise ValueError("Expected the CHERRY common-phrase library and keyboard panel captures")
     library.crop((0, 72, 1116, 600)).save(assets / "clipboard-phrase-library-header.png")
+    library.crop((984, 684, 1116, 852)).save(assets / "clipboard-phrase-library-gear.png")
     filters.crop((513, 124, 630, 226)).save(assets / "clipboard-phrase-library-entry.png")
 
 

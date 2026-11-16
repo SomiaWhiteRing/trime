@@ -24,6 +24,10 @@
     <string name="cherry_library_manage_phrases">管理常用语</string>
     <string name="cherry_library_phrase_hint">请填写语料内容</string>
     <string name="cherry_library_save_phrase">保存</string>
+    <string name="cherry_library_group_settings">分组设置</string>
+    <string name="cherry_library_rename_group">修改分组名</string>
+    <string name="cherry_library_favorites_folder">收藏夹</string>
+    <string name="cherry_library_create_group">＋创建分组</string>
     <string name="cherry_library_default">默认分组</string>
     <string name="cherry_library_add_group">添加分组</string>
     <string name="cherry_library_group_hint">请填写分组名称，最多6个字符</string>

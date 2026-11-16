@@ -30,13 +30,16 @@ import com.osfans.trime.util.AppUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.util.UUID
 import splitties.dimensions.dp
 
 class CherryPhraseLibraryActivity : Activity() {
     private val scope = MainScope()
-    private val groups by lazy { CherryPhraseGroups.names(this).toMutableList() }
+    private val groups by lazy { CherryPhraseGroups.all(this).toMutableList() }
     private lateinit var tabs: LinearLayout
     private lateinit var rows: LinearLayout
+    private lateinit var library: LinearLayout
+    private var management: LinearLayout? = null
     private var selected = 1
     private var phrases = emptyList<DatabaseBean>()
 
@@ -48,13 +51,13 @@ class CherryPhraseLibraryActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         intent.getStringExtra(CherryPhraseEditorActivity.GROUP)?.let { group ->
-            val index = groups.indexOf(group)
+            val index = groups.indexOfFirst { it.id == group }
             if (index >= 0) selected = index + 2
         }
         window.statusBarColor = 0xFFDEEDFF.toInt()
         window.navigationBarColor = Color.WHITE
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-        val root = LinearLayout(this).apply {
+        library = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.WHITE)
         }
@@ -81,13 +84,13 @@ class CherryPhraseLibraryActivity : Activity() {
                 })
             }
         }
-        root.addView(header, LinearLayout.LayoutParams(-1, dp(176)))
+        library.addView(header, LinearLayout.LayoutParams(-1, dp(176)))
         val controls = FrameLayout(this)
         tabs = LinearLayout(this)
         controls.addView(HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             addView(tabs)
-        }, FrameLayout.LayoutParams(-1, -1).apply { marginEnd = dp(60) })
+        }, FrameLayout.LayoutParams(-1, -1).apply { marginEnd = dp(112) })
         controls.addView(TextView(this).apply {
             text = "⊕"
             textSize = 22f
@@ -96,24 +99,32 @@ class CherryPhraseLibraryActivity : Activity() {
             contentDescription = context.getText(R.string.cherry_library_add_group)
             setOnClickListener { addGroup() }
         }, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.END or Gravity.BOTTOM).apply { marginEnd = dp(28) })
-        root.addView(controls, LinearLayout.LayoutParams(-1, dp(84)))
+        controls.addView(TextView(this).apply {
+            val image = artwork("clipboard-phrase-library-gear")
+            background = image
+            text = if (image == null) "⚙" else ""
+            gravity = Gravity.CENTER
+            contentDescription = getText(R.string.cherry_library_group_settings)
+            setOnClickListener { showGroupSettings() }
+        }, FrameLayout.LayoutParams(dp(44), dp(56), Gravity.END or Gravity.BOTTOM))
+        library.addView(controls, LinearLayout.LayoutParams(-1, dp(84)))
         rows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(18), 0, 0, 0) }
-        root.addView(ScrollView(this).apply { addView(rows) }, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(TextView(this).apply {
+        library.addView(ScrollView(this).apply { addView(rows) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        library.addView(TextView(this).apply {
             setText(R.string.cherry_library_add_phrase)
             gravity = Gravity.CENTER
             textSize = 18f
             setTextColor(Color.WHITE)
             background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                 intArrayOf(0xFF4C6FFF.toInt(), 0xFF66B2FF.toInt())).apply { cornerRadius = dp(24f) }
-            setOnClickListener { CherryPhraseEditorActivity.open(this@CherryPhraseLibraryActivity, groups.getOrNull(selected - 2)) }
+            setOnClickListener { CherryPhraseEditorActivity.open(this@CherryPhraseLibraryActivity, groups.getOrNull(selected - 2)?.id) }
         }, LinearLayout.LayoutParams(-1, dp(49)).apply {
             marginStart = dp(16)
             marginEnd = dp(16)
             topMargin = dp(8)
             bottomMargin = dp(12)
         })
-        setContentView(root)
+        setContentView(library)
         refreshTabs()
         scope.launch {
             CollectionHelper.observeRecords().collect { records ->
@@ -125,7 +136,7 @@ class CherryPhraseLibraryActivity : Activity() {
 
     private fun refreshTabs() {
         tabs.removeAllViews()
-        val titles = listOf(getString(R.string.collect), getString(R.string.cherry_library_default)) + groups
+        val titles = listOf(getString(R.string.collect), getString(R.string.cherry_library_default)) + groups.map { it.title }
         for ((index, title) in titles.withIndex()) {
             tabs.addView(FrameLayout(this).apply {
                 addView(TextView(context).apply {
@@ -158,7 +169,7 @@ class CherryPhraseLibraryActivity : Activity() {
         val visible = when (selected) {
             0 -> phrases.filter { it.pinned }
             1 -> phrases.filter { !it.recentOnly && it.phraseGroup == null }
-            else -> phrases.filter { !it.recentOnly && it.phraseGroup == groups[selected - 2] }
+            else -> phrases.filter { !it.recentOnly && it.phraseGroup == groups[selected - 2].id }
         }
         for (phrase in visible) {
             rows.addView(TextView(this).apply {
@@ -173,7 +184,80 @@ class CherryPhraseLibraryActivity : Activity() {
         }
     }
 
-    private fun addGroup() {
+    private fun showGroupSettings() {
+        val screen = management ?: LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+        }.also {
+            management = it
+            setContentView(it)
+        }
+        screen.removeAllViews()
+        screen.addView(FrameLayout(this).apply {
+            addView(TextView(context).apply {
+                setText(R.string.cherry_library_group_settings)
+                textSize = 16f
+                setTextColor(Color.BLACK)
+                gravity = Gravity.CENTER
+            }, FrameLayout.LayoutParams(-1, -1))
+            addView(TextView(context).apply {
+                text = "‹"
+                textSize = 28f
+                setTextColor(Color.BLACK)
+                gravity = Gravity.CENTER
+                contentDescription = getText(android.R.string.cancel)
+                setOnClickListener { closeGroupSettings() }
+            }, FrameLayout.LayoutParams(dp(42), -1))
+        }, LinearLayout.LayoutParams(-1, dp(58)))
+        val list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(8), dp(16), 0)
+        }
+        val names = listOf(getString(R.string.cherry_library_favorites_folder), getString(R.string.cherry_library_default)) +
+            groups.map { it.title }
+        for ((index, title) in names.withIndex()) {
+            list.addView(TextView(this).apply {
+                text = title
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), 0, dp(12), 0)
+                textSize = 14f
+                setTextColor(if (index == 0) 0xFF7D7D7D.toInt() else Color.BLACK)
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(8f)
+                    setColor(Color.WHITE)
+                    setStroke(dp(1f / 3f).toInt().coerceAtLeast(1), 0xFFEDEDED.toInt())
+                }
+                if (index >= 2) setOnClickListener { addGroup(index - 2) }
+            }, LinearLayout.LayoutParams(-1, dp(if (index == 0) 70 else 48)).apply { bottomMargin = dp(13) })
+        }
+        screen.addView(ScrollView(this).apply { addView(list) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        screen.addView(TextView(this).apply {
+            setText(R.string.cherry_library_create_group)
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(0xFF4C6FFF.toInt(), 0xFF66B2FF.toInt())).apply { cornerRadius = dp(24f) }
+            setOnClickListener { addGroup() }
+        }, LinearLayout.LayoutParams(-1, dp(45)).apply {
+            marginStart = dp(16)
+            marginEnd = dp(16)
+            bottomMargin = dp(12)
+        })
+    }
+
+    private fun closeGroupSettings() {
+        management = null
+        setContentView(library)
+    }
+
+    @Deprecated("Android invokes this on older versions")
+    override fun onBackPressed() {
+        if (management != null) closeGroupSettings() else super.onBackPressed()
+    }
+
+    private fun addGroup(index: Int? = null) {
+        val existing = index?.let(groups::get)
         val dialog = Dialog(this).apply { requestWindowFeature(Window.FEATURE_NO_TITLE) }
         val surface = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -186,7 +270,7 @@ class CherryPhraseLibraryActivity : Activity() {
             }
         }
         surface.addView(TextView(this).apply {
-            setText(R.string.cherry_library_add_group)
+            setText(if (existing == null) R.string.cherry_library_add_group else R.string.cherry_library_rename_group)
             gravity = Gravity.CENTER
             textSize = 16f
             setTextColor(Color.BLACK)
@@ -195,6 +279,8 @@ class CherryPhraseLibraryActivity : Activity() {
             setSingleLine()
             filters = arrayOf(InputFilter.LengthFilter(6))
             setHint(R.string.cherry_library_group_hint)
+            setText(existing?.title.orEmpty())
+            setSelection(length())
             textSize = 14f
             setPadding(dp(14), 0, dp(57), 0)
             background = GradientDrawable().apply {
@@ -227,17 +313,22 @@ class CherryPhraseLibraryActivity : Activity() {
         button(R.string.cancel, 0xFFF3F3F3.toInt(), Color.BLACK) { dialog.dismiss() }
         val confirm = button(R.string.cherry_phrase_confirm, 0xFF4B8FFF.toInt(), Color.WHITE) {
             val title = input.text.toString().trim()
-            groups.add(title)
+            if (existing == null) {
+                groups.add(CherryPhraseGroups.Group(UUID.randomUUID().toString(), title))
+                selected = groups.lastIndex + 2
+            } else {
+                groups[index] = existing.copy(title = title)
+            }
             CherryPhraseGroups.save(this, groups)
-            selected = groups.lastIndex + 2
             refreshTabs()
             refreshRows()
             dialog.dismiss()
+            if (management != null) showGroupSettings()
         }
         fun updateButton() {
             val name = input.text.toString().trim()
             count.text = "${input.length()}/6"
-            confirm.isEnabled = name.isNotEmpty() && name !in groups &&
+            confirm.isEnabled = name.isNotEmpty() && groups.none { it.id != existing?.id && it.title == name } &&
                 name != getString(R.string.cherry_library_default) && name != getString(R.string.collect)
             confirm.alpha = if (confirm.isEnabled) 1f else 0.32f
         }
