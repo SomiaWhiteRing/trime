@@ -298,8 +298,14 @@ class KeyView(
         val languageArtwork = cherryLanguageArtwork
         if (languageArtwork != null) {
             val scale = keyboardView.width / 1080f
-            val x = (width + paddingLeft - paddingRight) / 2f
-            val y = (height + paddingTop - paddingBottom) / 2f - 9f * scale
+            val offsetX = when (label) {
+                "En" -> 0f
+                "中" -> 1f
+                else -> 2f
+            }
+            val offsetY = if (label == "En" || label == "中") 15f else 16f
+            val x = (width + paddingLeft - paddingRight) / 2f + offsetX * scale
+            val y = (height + paddingTop - paddingBottom) / 2f - offsetY * scale
             drawCherrySprite(canvas, languageArtwork, x, y, scale)
         } else if (!drawCherryShift(canvas) && label.isNotEmpty()) {
             drawLabel(canvas, label)
