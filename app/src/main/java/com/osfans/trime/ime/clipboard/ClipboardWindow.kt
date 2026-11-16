@@ -440,6 +440,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         isClickable = true
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            setPadding(0, context.dp(7), 0, context.dp(7))
             val rows = listOf(
                 "启用剪贴板" to prefs.clipboardListening,
                 "候选条展示复制内容" to prefs.clipboardSuggestion,
@@ -454,7 +455,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     isChecked = preference.getValue()
                     applyCherrySwitchArtwork(this)
                     setPadding(context.dp(14), 0, context.dp(14), 0)
-                    addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(56)))
+                    background = GradientDrawable().apply {
+                        setColor(0xFF434343.toInt())
+                        setStroke(context.dp(1f / 3f).toInt().coerceAtLeast(1), 0xFF4F4F4F.toInt())
+                        cornerRadius = context.dp(3.5f)
+                    }
+                    addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(42)).apply {
+                        setMargins(context.dp(9), 0, context.dp(9), context.dp(7))
+                    })
                 }
             }
             controls[1].isEnabled = controls[0].isChecked
