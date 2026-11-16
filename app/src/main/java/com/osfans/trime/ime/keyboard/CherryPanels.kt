@@ -185,7 +185,14 @@ internal class CherrySymbolsWindow(
                 actions.listener.onAction(scope.theme.resolveAction("CherryDeleteWord"))
             }
         }, 662, 675, 210, 121)
-        cell(hitTarget(context, "返回", onReturn), 873, 675, 226, 121)
+        val returnKey = hitTarget(context, "返回", onReturn)
+        scope.drawable("cherry-symbol-return-pressed.png")?.let { pressed ->
+            returnKey.background = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_pressed), pressed)
+                addState(intArrayOf(), ColorDrawable(Color.TRANSPARENT))
+            }
+        }
+        cell(returnKey, 873, 675, 226, 121)
         render()
     }
 

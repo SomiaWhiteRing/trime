@@ -16,6 +16,7 @@ parser.add_argument("symbol_reference", type=Path, help="1116x2480 portrait capt
 parser.add_argument("translation_reference", type=Path, help="1116x2480 portrait capture of the active translation toolbar")
 parser.add_argument("--clipboard-reference", type=Path, help="1116x2480 portrait capture of the open clipboard")
 parser.add_argument("--reference-apk", type=Path, help="Local Baidu APK for clipboard and pinyin editor icons")
+parser.add_argument("--symbol-return-pressed", type=Path, help="1116 x 146 symbol footer crop from y=2290 with Return held")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -215,6 +216,11 @@ for i in range(5):
 sidebar.save(assets/'cherry-symbol-sidebar.png')
 symbol.paste(symbol.crop((200,0,201,650)).resize((916,650)),(200,0))
 symbol.save(assets/'cherry-symbol-panel.png')
+if args.symbol_return_pressed:
+    pressed_footer = Image.open(args.symbol_return_pressed).convert("RGB")
+    if pressed_footer.size != (1116, 146):
+        raise ValueError("Expected the held CHERRY symbol footer at 1116 x 146")
+    pressed_footer.crop((873, 16, 1099, 137)).save(assets / "cherry-symbol-return-pressed.png")
 
 theme_path=theme_dir/'baidu_cherry.trime.yaml'
 theme=yaml.safe_load(theme_path.read_text(encoding='utf-8'))
