@@ -263,6 +263,8 @@ class Key(
 
     val click: KeyAction?
         get() = keyActions[KeyBehavior.CLICK]
+
+    internal val foregroundArtwork get() = keyDef?.foregroundArtwork.orEmpty()
     val longClick: KeyAction?
         get() = keyActions[KeyBehavior.LONG_CLICK]
 

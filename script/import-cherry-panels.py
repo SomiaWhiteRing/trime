@@ -39,6 +39,8 @@ parser.add_argument("--clipboard-send-sequential", nargs=4, metavar=("IDLE_PANEL
                     help="Native sequential selector rows, recommendation body and footer captures")
 parser.add_argument("--clipboard-send-revoke", type=Path,
                     help="1116 x 702 CHERRY recommendation body with the staged Undo and Send controls")
+parser.add_argument("--cherry-alphabet-footers", nargs=2, metavar=("CHINESE", "ENGLISH"),
+                    help="1116 x 186 portrait alphabet footer captures from y=2270")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -218,6 +220,36 @@ if args.clipboard_send_revoke:
     controls = recommendation_capsule(body, 819)
     controls.crop((0, 0, 132, 120)).save(assets / "clipboard-recommend-revoke.png")
     controls.crop((132, 0, 297, 120)).save(assets / "clipboard-recommend-staged-plane.png")
+
+
+alphabet_glyphs = {
+    "F6": ("123", "number"), "F1": ("符", "symbols"), "F39": ("前往", "enter-go"),
+    "，": ("，", "comma-zh"), "。": ("。", "period-zh"), ".": (".", "period-en"),
+}
+if args.cherry_alphabet_footers:
+    chinese, english = [Image.open(path).convert("RGB") for path in args.cherry_alphabet_footers]
+    if chinese.size != (1116, 186) or english.size != (1116, 186):
+        raise ValueError("Expected 1116 x 186 CHERRY alphabet footer captures")
+    for name, source, key_left, key_right, glyph in (
+        ("number", chinese, 0, 112, (21, 63, 92, 102)),
+        ("symbols", chinese, 845, 957, (875, 59, 928, 106)),
+        ("enter-go", chinese, 957, 1115, (991, 59, 1081, 107)),
+        ("comma-zh", chinese, 223, 335, (271, 80, 287, 101)),
+        ("period-zh", chinese, 734, 845, (776, 73, 803, 100)),
+        ("period-en", english, 734, 845, (782, 86, 796, 99)),
+    ):
+        tile = Image.new("RGBA", (key_right - key_left, 172))
+        left, top, right, bottom = glyph
+        for y in range(top, bottom):
+            low = source.getpixel((left - 1, y))[1]
+            high = source.getpixel((right, y))[1]
+            for x in range(left, right):
+                background = low + (high - low) * (x - left) / (right - left)
+                contrast = source.getpixel((x, y))[1] - background
+                if contrast > 2:
+                    alpha = min(255, round(255 * contrast / (179 - background)))
+                    tile.putpixel((x - key_left, y - 12), (179, 179, 179, alpha))
+        tile.save(assets / f"cherry-alphabet-{name}.png")
 
 
 def resource(file):
@@ -445,6 +477,11 @@ def populate(layout, builder, english=False):
             existing=builder.get(action(item['center']),{})
             key=dict(existing,click=action(item['center']),width=w*100/1080)
             key["bounds"] = qwerty_bounds(item)
+            if args.cherry_alphabet_footers and item["center"] in alphabet_glyphs:
+                label, image = alphabet_glyphs[item["center"]]
+                key["foreground_artwork"] = {label: f"cherry-alphabet-{image}.png"}
+            if item["center"] in {"，", "。", "."}:
+                key["label_symbol"] = " "
             style_id = item["back_style"]
             key["key_back_color"] = f"cherry-keycap-{style_id}-{w}-normal.png"
             key["hilited_key_back_color"] = f"cherry-keycap-{style_id}-{w}-pressed.png"

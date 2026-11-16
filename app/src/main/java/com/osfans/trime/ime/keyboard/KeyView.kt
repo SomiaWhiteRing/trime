@@ -58,6 +58,9 @@ class KeyView(
 
     private var cachedIcon: IconicsDrawable? = null
     private var cachedIconName: String? = null
+    private val foregroundArtwork by lazy {
+        key.foregroundArtwork.mapValues { (_, name) -> ColorManager.getDrawable(name) }
+    }
     private val cherryShiftArtwork by lazy {
         if (key.code != KeyEvent.KEYCODE_SHIFT_LEFT || "cherry_edit" !in theme.presetKeyboards) {
             emptyList()
@@ -311,7 +314,11 @@ class KeyView(
         }
 
         val languageArtwork = cherryLanguageArtwork
-        if (languageArtwork != null) {
+        val importedArtwork = foregroundArtwork[label]
+        if (importedArtwork != null) {
+            importedArtwork.setBounds(paddingLeft, paddingTop, width - paddingRight, height - paddingBottom)
+            importedArtwork.draw(canvas)
+        } else if (languageArtwork != null) {
             val scale = keyboardView.width / 1080f
             val offsetX = when (label) {
                 "En" -> 1f

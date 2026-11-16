@@ -51,6 +51,7 @@ data class TextKeyboard(
     @Serializable
     data class TextKey(
         val bounds: NormalizedBounds? = null,
+        val foregroundArtwork: Map<String, String> = emptyMap(),
         val width: Float = 0f,
         val height: Float = 0f,
         val roundCorner: Float = -1f,
