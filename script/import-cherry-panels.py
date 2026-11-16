@@ -142,6 +142,18 @@ icon = sprite(sheet, int(index)).convert("RGBA")
 icon = icon.resize((91, 63), Image.Resampling.LANCZOS)
 unlocked.paste((179, 179, 179, 255), (73, 19, 164, 82), icon.getchannel("A"))
 unlocked.save(assets / "cherry-symbol-lock-unlocked.png")
+for name, left, right, style, x, y, height, shade in (
+    ("previous-enabled", 243, 446, 202, 318, 711, 31, 179),
+    ("next-disabled", 447, 661, 201, 532, 710, 32, 87),
+):
+    arrow = symbol.crop((left, 675, right, 796)).convert("RGBA")
+    dx, dy = x - left, y - 675
+    erase_labels(arrow, (dx - 3, dy - 3, dx + 58, dy + height + 3), dx - 5)
+    sheet, index = config[f"STYLE{style}"]["nm_img"].split(",")
+    mask = sprite(sheet, int(index)).convert("RGBA").getchannel("A")
+    mask = mask.resize((55, height), Image.Resampling.LANCZOS)
+    arrow.paste((shade, shade, shade, 255), (dx, dy, dx + 55, dy + height), mask)
+    arrow.save(assets / f"cherry-symbol-{name}.png")
 sidebar=symbol.crop((16,13,185,622))
 # Use the normal first row as a repeating list background, keeping the frame.
 row=sidebar.crop((0,8,169,128))

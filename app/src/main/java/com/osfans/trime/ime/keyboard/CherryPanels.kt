@@ -239,6 +239,8 @@ internal class CherrySymbolsWindow(
         lock.background = if (locked) null else scope.drawable("cherry-symbol-lock-unlocked.png")
         previous.isEnabled = page > 0
         next.isEnabled = (page + 1) * 4 < rows.size
+        previous.background = if (previous.isEnabled) scope.drawable("cherry-symbol-previous-enabled.png") else null
+        next.background = if (next.isEnabled) null else scope.drawable("cherry-symbol-next-disabled.png")
     }
 
     override fun onAttached() {
