@@ -305,7 +305,7 @@ class KeyView(
         val arrow = cherryShiftArtwork.getOrNull(if (active) 1 else 0) ?: return false
         val scale = keyboardView.width / 1080f
         val centerX = (width + paddingLeft - paddingRight) / 2f
-        val centerY = (height + paddingTop - paddingBottom) / 2f
+        val centerY = (height + paddingTop - paddingBottom) / 2f - 9f * scale
         fun draw(sprite: Drawable, x: Float, y: Float) {
             val w = (sprite.intrinsicWidth * scale).roundToInt()
             val h = (sprite.intrinsicHeight * scale).roundToInt()
