@@ -14,11 +14,17 @@ parser.add_argument("number_reference", type=Path, help="1116x2480 portrait capt
 parser.add_argument("symbol_reference", type=Path, help="1116x2480 portrait capture of the Chinese symbol page")
 parser.add_argument("translation_reference", type=Path, help="1116x2480 portrait capture of the active translation toolbar")
 parser.add_argument("--clipboard-reference", type=Path, help="1116x2480 portrait capture of the open clipboard")
+parser.add_argument("--reference-apk", type=Path, help="Local Baidu APK for clipboard footer icons")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.reference_apk:
+    with zipfile.ZipFile(args.reference_apk) as apk:
+        for state, resource_file in (("locked", "kqP.png"), ("unlocked", "WSD.png")):
+            (assets / f"clipboard-lock-{state}.png").write_bytes(apk.read(f"res/{resource_file}"))
 
 if args.clipboard_reference:
     reference = Image.open(args.clipboard_reference).convert("RGBA")

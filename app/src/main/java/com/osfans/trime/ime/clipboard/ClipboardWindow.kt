@@ -7,11 +7,13 @@ package com.osfans.trime.ime.clipboard
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.util.Patterns
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
@@ -221,6 +223,36 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         addView(
                             recyclerView,
                             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f),
+                        )
+                        addView(
+                            FrameLayout(context).apply {
+                                setBackgroundColor(0xFF424242.toInt())
+                                val lock = ImageView(context).apply {
+                                    scaleType = ImageView.ScaleType.CENTER_INSIDE
+                                    contentDescription = context.getString(R.string.clipboard_return_after_paste)
+                                }
+                                val updateLock = {
+                                    val locked = !clipboardReturnAfterPaste
+                                    lock.isSelected = locked
+                                    val state = if (locked) "locked" else "unlocked"
+                                    val artwork = scope.drawable("clipboard-lock-$state.png")
+                                    if (artwork == null) {
+                                        lock.setImageResource(android.R.drawable.ic_lock_lock)
+                                    } else {
+                                        lock.setImageDrawable(artwork)
+                                    }
+                                    lock.imageTintList = ColorStateList.valueOf(
+                                        if (locked) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt(),
+                                    )
+                                }
+                                updateLock()
+                                lock.setOnClickListener {
+                                    prefs.clipboardReturnAfterPaste.setValue(!clipboardReturnAfterPaste)
+                                    updateLock()
+                                }
+                                addView(lock, FrameLayout.LayoutParams(context.dp(61), FrameLayout.LayoutParams.MATCH_PARENT))
+                            },
+                            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(37)),
                         )
                     },
                     FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
