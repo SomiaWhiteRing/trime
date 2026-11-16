@@ -13,6 +13,8 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.view.View
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
@@ -25,8 +27,10 @@ import splitties.views.dsl.constraintlayout.constraintLayout
 import splitties.views.dsl.constraintlayout.endOfParent
 import splitties.views.dsl.constraintlayout.lParams
 import splitties.views.dsl.constraintlayout.startOfParent
+import splitties.views.dsl.constraintlayout.topOfParent
 import splitties.views.dsl.core.Ui
 import splitties.views.dsl.core.add
+import splitties.views.dsl.core.matchParent
 import splitties.views.dsl.core.wrapContent
 
 class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope) : Ui {
@@ -59,7 +63,21 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     private val size = theme.style.run { candidateViewHeight + commentHeight }
 
     override val root = constraintLayout {
-        if (cherry) setBackgroundColor(0xFF434343.toInt())
+        if (cherry) {
+            clipChildren = false
+            setBackgroundColor(0xFF434343.toInt())
+            add(
+                View(ctx).apply {
+                    background = GradientDrawable(
+                        GradientDrawable.Orientation.TOP_BOTTOM,
+                        intArrayOf(0xFF4F4F4F.toInt(), 0xFF353535.toInt()),
+                    )
+                },
+                lParams(matchParent, dp(1)) {
+                    topOfParent(dp(37) - 1)
+                },
+            )
+        }
         add(
             tabLayout,
             lParams(wrapContent, dp(size)) {

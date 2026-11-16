@@ -74,7 +74,13 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private val category = MutableStateFlow(Category.ALL)
     private val numericClip = Regex("""[+\-]?[\p{Nd}]+(?:[.,]\p{Nd}+)?""")
     private lateinit var categoryLabels: List<TextView>
-    private lateinit var historyCount: TextView
+    private val historyCount by lazy {
+        TextView(context).apply {
+            textSize = 13f
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            setTextColor(scope.colors.keySymbolColor)
+        }
+    }
 
     private val prefs = AppPrefs.defaultInstance().clipboard
     private val clipboardReturnAfterPaste by prefs.clipboardReturnAfterPaste
@@ -197,11 +203,6 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                             ),
                         )
                     }
-                }
-                historyCount = TextView(context).apply {
-                    textSize = 13f
-                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                    setTextColor(scope.colors.keySymbolColor)
                 }
                 categories.addView(
                     historyCount,
