@@ -23,6 +23,7 @@ import com.osfans.trime.data.theme.model.ToolBar
 import com.osfans.trime.ime.bar.ui.ToolButton
 import com.osfans.trime.ime.core.InputTabLayout
 import splitties.dimensions.dp
+import splitties.views.dsl.constraintlayout.centerHorizontally
 import splitties.views.dsl.constraintlayout.centerVertically
 import splitties.views.dsl.constraintlayout.constraintLayout
 import splitties.views.dsl.constraintlayout.endOfParent
@@ -78,8 +79,8 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
         }
     }
     private val settingsTitle = TextView(ctx).apply {
-        setText(R.string.clipboard)
-        textSize = 14f
+        setText(R.string.cherry_clipboard_settings)
+        textSize = 16f
         setTextColor(0xFFB3B3B3.toInt())
         visibility = View.GONE
     }
@@ -119,7 +120,7 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
                 topOfParent(dp(10f / 3).roundToInt())
             })
             add(settingsTitle, lParams(wrapContent, wrapContent) {
-                startOfParent(dp(47))
+                centerHorizontally()
                 centerVertically()
             })
         }
