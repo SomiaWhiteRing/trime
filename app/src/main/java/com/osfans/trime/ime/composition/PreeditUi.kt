@@ -98,6 +98,7 @@ open class PreeditUi(
         }
         val string = display.toSpannedString()
         val cursorPos = display.cursorPos
+        preedit.preeditCaret = cursorPos
         val hasPreedit = composition.length > 0
         visible = hasPreedit
         if (!visible) {

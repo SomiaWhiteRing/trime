@@ -242,6 +242,18 @@ class Rime :
         emitResponse()
     }
 
+    override suspend fun stepRawInputCaret(forward: Boolean) = withRimeContext {
+        val context = getRimeContext()
+        val raw = context.input.encodeToByteArray()
+        val position = context.caretPos
+        val range = if (forward) position + 1..raw.size else position - 1 downTo 0
+        val next = range.firstOrNull { it == raw.size || raw[it].toInt() and 0xC0 != 0x80 }
+        if (next != null) {
+            setRimeCaretPos(next)
+            emitResponse()
+        }
+    }
+
     override suspend fun availableSchemata(): Array<SchemaItem> = withRimeContext { getAvailableRimeSchemaList() }
 
     override suspend fun enabledSchemata(): Array<SchemaItem> = withRimeContext { getSelectedRimeSchemaList() }

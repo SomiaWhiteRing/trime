@@ -54,6 +54,8 @@ interface RimeApi {
 
     suspend fun moveCursorPos(position: Int)
 
+    suspend fun stepRawInputCaret(forward: Boolean)
+
     suspend fun availableSchemata(): Array<SchemaItem>
 
     suspend fun enabledSchemata(): Array<SchemaItem>

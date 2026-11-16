@@ -269,7 +269,7 @@ class InputView(
         updateKeyboardSize()
 
         add(
-            preedit.ui.root,
+            preedit.view,
             lParams(wrapContent, wrapContent) {
                 above(keyboardView)
                 startOfParent()
@@ -324,7 +324,7 @@ class InputView(
                 endToStartOf(rightPaddingSpace)
             }
         }
-        preedit.ui.root.setPadding(sidePadding, 0, sidePadding, 0)
+        preedit.view.setPadding(sidePadding, 0, sidePadding, 0)
         inputBar.view.setPadding(sidePadding, 0, sidePadding, 0)
     }
 

@@ -14,7 +14,7 @@ parser.add_argument("number_reference", type=Path, help="1116x2480 portrait capt
 parser.add_argument("symbol_reference", type=Path, help="1116x2480 portrait capture of the Chinese symbol page")
 parser.add_argument("translation_reference", type=Path, help="1116x2480 portrait capture of the active translation toolbar")
 parser.add_argument("--clipboard-reference", type=Path, help="1116x2480 portrait capture of the open clipboard")
-parser.add_argument("--reference-apk", type=Path, help="Local Baidu APK for clipboard footer icons")
+parser.add_argument("--reference-apk", type=Path, help="Local Baidu APK for clipboard and pinyin editor icons")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -23,6 +23,13 @@ skin = zipfile.ZipFile(args.skin)
 
 if args.reference_apk:
     with zipfile.ZipFile(args.reference_apk) as apk:
+        (assets / "cherry-preedit-pencil.png").write_bytes(apk.read("assets/1080/30.png"))
+        editor_tiles = configparser.ConfigParser(interpolation=None)
+        editor_tiles.read_string(apk.read("assets/1080/edit_panel.til").decode("utf-8-sig"))
+        editor_sheet = Image.open(io.BytesIO(apk.read("assets/1080/edit_panel.png")))
+        for name, index in (("left", 3), ("right", 4)):
+            x, y, width, height = map(int, editor_tiles[f"IMG{index}"]["source_rect"].split(","))
+            editor_sheet.crop((x, y, x + width, y + height)).save(assets / f"cherry-preedit-{name}.png")
         for state, resource_file in (("locked", "kqP.png"), ("unlocked", "WSD.png")):
             (assets / f"clipboard-lock-{state}.png").write_bytes(apk.read(f"res/{resource_file}"))
         (assets / "clipboard-footer-settings.png").write_bytes(apk.read("res/4ST.png"))
