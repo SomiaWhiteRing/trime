@@ -79,6 +79,8 @@ internal class CherryNumberWindow(
         val backspace = GestureFrame(context).apply {
             contentDescription = "退格"
             isRepeatable = true
+            repeatDelayMillis = 450
+            repeatIntervalMillis = 175
             setOnClickListener { key("BackSpace") }
         }.withNumericPress("backspace")
         cell(backspace, 890, 2, 226, 175)

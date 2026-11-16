@@ -61,6 +61,8 @@ open class GestureFrame(context: Context) : FrameLayout(context) {
     var onSwipe: ((behavior: KeyBehavior) -> Unit)? = null
 
     var isRepeatable = false
+    internal var repeatDelayMillis: Long? = null
+    internal var repeatIntervalMillis: Long? = null
     var isSlideCursor = false
     var isSlideDelete = false
 
@@ -222,7 +224,7 @@ open class GestureFrame(context: Context) : FrameLayout(context) {
 
     private fun startLongPressJob(currentTouchId: Int) {
         longPressJob = lifecycleScope.launch {
-            delay(longPressTimeout.toLong())
+            delay(repeatDelayMillis ?: longPressTimeout.toLong())
             if (touchId != currentTouchId) return@launch
             if (swipeTriggered || slideActivated) return@launch
             isLongPressed = true
@@ -243,7 +245,7 @@ open class GestureFrame(context: Context) : FrameLayout(context) {
                 while (true) {
                     if (vibrateOnKeyRepeat) InputFeedbackManager.keyPressVibrate(this@GestureFrame)
                     dispatchBehavior(KeyBehavior.CLICK, true)
-                    delay(repeatInterval.toLong())
+                    delay(repeatIntervalMillis ?: repeatInterval.toLong())
                 }
             } finally {
                 onCancel?.invoke()
