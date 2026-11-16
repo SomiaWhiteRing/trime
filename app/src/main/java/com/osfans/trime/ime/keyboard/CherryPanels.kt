@@ -180,6 +180,10 @@ internal class CherrySymbolsWindow(
         cell(next, 447, 675, 214, 121)
         cell(cherryBackspace(context) {
             actions.listener.onAction(scope.theme.resolveAction("BackSpace"))
+        }.apply {
+            onSwipeLeft = {
+                actions.listener.onAction(scope.theme.resolveAction("CherryDeleteWord"))
+            }
         }, 662, 675, 210, 121)
         cell(hitTarget(context, "返回", onReturn), 873, 675, 226, 121)
         render()
