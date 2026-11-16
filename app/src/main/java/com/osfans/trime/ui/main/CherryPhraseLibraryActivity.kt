@@ -40,6 +40,7 @@ class CherryPhraseLibraryActivity : Activity() {
     private lateinit var rows: LinearLayout
     private lateinit var library: LinearLayout
     private var management: LinearLayout? = null
+    private var sorting = false
     private var selected = 1
     private var phrases = emptyList<DatabaseBean>()
 
@@ -192,6 +193,7 @@ class CherryPhraseLibraryActivity : Activity() {
             management = it
             setContentView(it)
         }
+        sorting = false
         screen.removeAllViews()
         screen.addView(FrameLayout(this).apply {
             addView(TextView(context).apply {
@@ -208,6 +210,14 @@ class CherryPhraseLibraryActivity : Activity() {
                 contentDescription = getText(android.R.string.cancel)
                 setOnClickListener { closeGroupSettings() }
             }, FrameLayout.LayoutParams(dp(42), -1))
+            addView(TextView(context).apply {
+                val image = artwork("clipboard-phrase-library-gear")
+                background = image
+                text = if (image == null) "⚙" else ""
+                gravity = Gravity.CENTER
+                contentDescription = getText(R.string.cherry_library_sort_groups)
+                setOnClickListener { showGroupSorting() }
+            }, FrameLayout.LayoutParams(dp(50), -1, Gravity.END))
         }, LinearLayout.LayoutParams(-1, dp(58)))
         val list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -246,6 +256,38 @@ class CherryPhraseLibraryActivity : Activity() {
         })
     }
 
+    private fun showGroupSorting() {
+        sorting = true
+        val view = CherryPhraseGroupSorting(this, groups, onBack = ::showGroupSettings, onDone = { order ->
+            val activeId = groups.getOrNull(selected - 2)?.id
+            groups.clear()
+            groups.addAll(order)
+            persistGroupChanges(activeId)
+            showGroupSettings()
+        }) { deleted, done ->
+            scope.launch {
+                val activeId = groups.getOrNull(selected - 2)?.id
+                CollectionHelper.deletePhraseGroups(deleted)
+                groups.removeAll { it.id in deleted }
+                persistGroupChanges(activeId)
+                done()
+            }
+        }
+        val screen = checkNotNull(management)
+        screen.removeAllViews()
+        screen.addView(view, LinearLayout.LayoutParams(-1, -1))
+    }
+
+    private fun persistGroupChanges(activeId: String?) {
+        CherryPhraseGroups.save(this, groups)
+        if (selected >= 2) {
+            val active = groups.indexOfFirst { it.id == activeId }
+            selected = if (active >= 0) active + 2 else 1
+        }
+        refreshTabs()
+        refreshRows()
+    }
+
     private fun closeGroupSettings() {
         management = null
         setContentView(library)
@@ -253,7 +295,11 @@ class CherryPhraseLibraryActivity : Activity() {
 
     @Deprecated("Android invokes this on older versions")
     override fun onBackPressed() {
-        if (management != null) closeGroupSettings() else super.onBackPressed()
+        when {
+            sorting -> showGroupSettings()
+            management != null -> closeGroupSettings()
+            else -> super.onBackPressed()
+        }
     }
 
     private fun addGroup(index: Int? = null) {

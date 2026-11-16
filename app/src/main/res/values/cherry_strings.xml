@@ -29,6 +29,11 @@
     <string name="cherry_library_rename_group">Rename group</string>
     <string name="cherry_library_favorites_folder">Favorites folder</string>
     <string name="cherry_library_create_group">+ Create group</string>
+    <string name="cherry_library_sort_groups">Order groups</string>
+    <string name="cherry_library_sort_done">Done</string>
+    <string name="cherry_library_sort_hint">Drag the handles to reorder</string>
+    <string name="cherry_library_delete_groups">Delete (%1$d)</string>
+    <string name="cherry_library_confirm_delete_groups">Delete the selected %1$d groups and all their phrases?</string>
     <string name="cherry_library_default">Default group</string>
     <string name="cherry_library_add_group">Add group</string>
     <string name="cherry_library_group_hint">Enter a group name, up to 6 characters</string>

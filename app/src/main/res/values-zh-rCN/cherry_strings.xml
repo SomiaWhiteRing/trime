@@ -28,6 +28,11 @@
     <string name="cherry_library_rename_group">修改分组名</string>
     <string name="cherry_library_favorites_folder">收藏夹</string>
     <string name="cherry_library_create_group">＋创建分组</string>
+    <string name="cherry_library_sort_groups">分组排序</string>
+    <string name="cherry_library_sort_done">完成</string>
+    <string name="cherry_library_sort_hint">-拖动滑动条可排序哦-</string>
+    <string name="cherry_library_delete_groups">删除(%1$d)</string>
+    <string name="cherry_library_confirm_delete_groups">是否删除当前选中的%1$d条分组及分组下全部内容？</string>
     <string name="cherry_library_default">默认分组</string>
     <string name="cherry_library_add_group">添加分组</string>
     <string name="cherry_library_group_hint">请填写分组名称，最多6个字符</string>

@@ -47,6 +47,7 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
     suspend fun unpin(id: Int) = cltDao.updatePinned(id, false)
 
     suspend fun delete(id: Int) = cltDao.delete(id)
+    suspend fun deletePhraseGroups(groupIds: List<String>) = cltDao.deletePhraseGroups(groupIds)
 
     suspend fun deleteAll(skipPinned: Boolean = true) {
         if (skipPinned) {
