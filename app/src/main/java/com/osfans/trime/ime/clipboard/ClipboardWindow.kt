@@ -84,7 +84,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
 
     private val category = MutableStateFlow(Category.ALL)
     private val tabLabels by lazy {
-        listOf(R.string.clipboard, if (usesCherryLayout) R.string.cherry_clipboard_phrases else R.string.collection)
+        if (usesCherryLayout) {
+            listOf(R.string.clipboard, R.string.cherry_clipboard_phrases, R.string.cherry_clipboard_recommend)
+        } else {
+            listOf(R.string.clipboard, R.string.collection)
+        }
     }
     private val numericClip = Regex("""[+\-]?[\p{Nd}]+(?:[.,]\p{Nd}+)?""")
     private lateinit var categoryLabels: List<TextView>
@@ -382,13 +386,39 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
+    private val recommendationPage by lazy {
+        ClipboardPageUi(context).apply {
+            root.removeView(recyclerView)
+            root.setBackgroundColor(0xFF353535.toInt())
+            root.addView(LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                val illustration = scope.drawable("clipboard-recommend-empty.png")
+                if (illustration != null) {
+                    addView(ImageView(context).apply {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setImageDrawable(illustration)
+                    }, LinearLayout.LayoutParams(context.dp(120), context.dp(68)))
+                }
+                addView(TextView(context).apply {
+                    setText(R.string.cherry_clipboard_recommend_empty)
+                    textSize = 14f
+                    setTextColor(0xFFB3B3B3.toInt())
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    if (illustration != null) topMargin = context.dp(11)
+                })
+            }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        }
+    }
+
     override fun onCreateView() = ClipboardLayout(context, scope).apply {
         clipboardLayout = this
         clipboardPagesAdapter = object : ClipboardPagesAdapter() {
             override fun getItemCount(): Int = tabLabels.size
             override fun onCreatePage(position: Int): ClipboardPageUi = when (position) {
                 0 -> clipboardPage
-                else -> collectionPage
+                1 -> collectionPage
+                else -> recommendationPage
             }
         }
         viewPager.apply {
@@ -455,7 +485,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             setTextColor(scope.colors.keyTextColor)
         }
         if (usesCherryLayout) {
-            tabUi.root.minimumWidth = context.dp(56)
+            tabUi.root.minimumWidth = context.dp(if (position == 2) 42 else 56)
             tabUi.root.minimumHeight = context.dp(35)
             tabUi.activeStyle = { active ->
                 tabUi.label.paint.isFakeBoldText = active
