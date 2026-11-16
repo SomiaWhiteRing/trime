@@ -26,13 +26,14 @@ open class PreeditUi(
     private val scope: ThemeScope,
     private val setupPreeditView: (TextView.() -> Unit)? = null,
     private val onMoveCursor: ((Int) -> Unit)? = null,
+    private val compactPinyin: Boolean = false,
 ) : Ui {
     private val theme: Theme
         get() = scope.theme
 
     // Read at use time so a scheme switch re-renders with the new colors.
-    private val textColor: Int get() = scope.colors.textColor
-    private val highlightTextColor: Int get() = scope.colors.hilitedTextColor
+    private val textColor: Int get() = if (compactPinyin) 0xFFB3B3B3.toInt() else scope.colors.textColor
+    private val highlightTextColor: Int get() = if (compactPinyin) textColor else scope.colors.hilitedTextColor
 
     val preedit =
         view(::PreeditTextView) {
@@ -77,8 +78,26 @@ open class PreeditUi(
     }
 
     fun update(composition: CompositionProto) {
-        val string = composition.toSpannedString()
-        val cursorPos = composition.cursorPos
+        val pinyin = composition.preedit
+        fun isFormatting(char: Char) = char == ' ' || char == '\u2038'
+        val display = if (compactPinyin && pinyin != null && pinyin.any(::isFormatting) &&
+            pinyin.all { isFormatting(it) || it == '\'' || it in 'a'..'z' || it in 'A'..'Z' }
+        ) {
+            // Rime's syllable spacing and soft caret are not part of the editable spelling.
+            val text = pinyin.filterNot(::isFormatting)
+            fun offset(index: Int) = index - pinyin.take(index).count(::isFormatting)
+            composition.copy(
+                length = text.length,
+                cursorPos = offset(composition.cursorPos),
+                selStart = offset(composition.selStart),
+                selEnd = offset(composition.selEnd),
+                preedit = text,
+            )
+        } else {
+            composition
+        }
+        val string = display.toSpannedString()
+        val cursorPos = display.cursorPos
         val hasPreedit = composition.length > 0
         visible = hasPreedit
         if (!visible) {

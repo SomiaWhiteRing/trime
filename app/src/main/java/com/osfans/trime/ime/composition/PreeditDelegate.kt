@@ -7,6 +7,7 @@ package com.osfans.trime.ime.composition
 
 import android.graphics.drawable.GradientDrawable
 import android.view.ContextThemeWrapper
+import android.view.Gravity
 import android.view.View
 import android.view.ViewOutlineProvider
 import com.osfans.trime.core.CompositionProto
@@ -33,17 +34,19 @@ class PreeditDelegate(override val di: DI) :
     private val theme: Theme
         get() = scope.theme
 
+    private val cherry: Boolean get() = "cherry_edit" in theme.presetKeyboards
+
     /** Applies the text-background styling; re-applied on scheme refreshes. */
     private fun setupPreeditBackground(view: View) {
-        val startRadius = view.dp(theme.preedit.topStartRadius)
-        val endRadius = view.dp(theme.preedit.topEndRadius)
+        val startRadius = if (cherry) 0f else view.dp(theme.preedit.topStartRadius)
+        val endRadius = if (cherry) 0f else view.dp(theme.preedit.topEndRadius)
         val radii = if (view.layoutDirection == View.LAYOUT_DIRECTION_LTR) {
             floatArrayOf(startRadius, startRadius, endRadius, endRadius, 0f, 0f, 0f, 0f)
         } else {
             floatArrayOf(endRadius, endRadius, startRadius, startRadius, 0f, 0f, 0f, 0f)
         }
         view.background = GradientDrawable().apply {
-            setColor(scope.colors.textBackColor)
+            setColor(if (cherry) 0xFF4D4D4D.toInt() else scope.colors.textBackColor)
             shape = GradientDrawable.RECTANGLE
             cornerRadii = radii
         }
@@ -57,11 +60,16 @@ class PreeditDelegate(override val di: DI) :
             scope,
             setupPreeditView = {
                 setupPreeditBackground(this)
-                horizontalPadding = dp(theme.preedit.horizontalPadding)
+                horizontalPadding = dp(if (cherry) 6 else theme.preedit.horizontalPadding)
+                if (cherry) {
+                    gravity = Gravity.CENTER_VERTICAL
+                    height = dp(21)
+                }
             },
+            compactPinyin = cherry,
             onMoveCursor = { pos -> rime.launchOnReady { it.moveCursorPos(pos) } },
         ).apply {
-            root.alpha = theme.preedit.alpha
+            root.alpha = if (cherry) 1f else theme.preedit.alpha
             root.visibility = View.INVISIBLE
         }
 
