@@ -17,6 +17,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
 import android.widget.LinearLayout
+import android.widget.OverScroller
 import android.widget.ScrollView
 import android.widget.TextView
 import com.osfans.trime.core.data.DataManager
@@ -132,7 +133,7 @@ internal class CherrySymbolsWindow(
     private val actions: CommonKeyboardActionListener by instance()
     private val preferences = service.getSharedPreferences("cherry_symbols", Context.MODE_PRIVATE)
     private lateinit var grid: LinearLayout
-    private lateinit var symbolScroll: ScrollView
+    private lateinit var symbolScroll: SymbolScrollView
     private lateinit var categoryLabels: List<TextView>
     private lateinit var previous: View
     private lateinit var next: View
@@ -152,6 +153,7 @@ internal class CherrySymbolsWindow(
                 categoryLabels = catalog.groups.mapIndexed { index, group ->
                     label(context, group.label, 15f) {
                         category = index
+                        symbolScroll.stopPageScroll()
                         symbolScroll.scrollTo(0, 0)
                         render()
                     }.also { addView(it, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, context.dp(40))) }
@@ -160,24 +162,7 @@ internal class CherrySymbolsWindow(
         }
         cell(sidebar, 16, 13, 169, 609)
         grid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        symbolScroll = object : ScrollView(context) {
-            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-                val viewport = MeasureSpec.getSize(heightMeasureSpec)
-                val rowHeight = (viewport / 4f).roundToInt()
-                for (i in 0 until grid.childCount) {
-                    grid.getChildAt(i).layoutParams.height = rowHeight
-                }
-                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-            }
-
-            override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-                super.onLayout(changed, left, top, right, bottom)
-                updateFooter()
-            }
-        }.apply {
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        symbolScroll = SymbolScrollView(context, grid, ::updateFooter).apply {
             setOnScrollChangeListener { _, _, _, _, _ -> updateFooter() }
         }
         cell(symbolScroll, 199, 9, 905, 644)
@@ -190,11 +175,11 @@ internal class CherrySymbolsWindow(
         previous = pagingKey("上一页") {
             val scroll = symbolScroll
             val target = if (scroll.scrollY <= scroll.height) 0 else scroll.scrollY - pageDistance()
-            scroll.smoothScrollTo(0, target)
+            scroll.scrollPageTo(target)
         }
         next = pagingKey("下一页") {
             val scroll = symbolScroll
-            scroll.smoothScrollTo(0, minOf(scroll.scrollY + pageDistance(), grid.height - scroll.height))
+            scroll.scrollPageTo(minOf(scroll.scrollY + pageDistance(), grid.height - scroll.height))
         }
         cell(lock, 20, 675, 222, 121)
         cell(previous, 243, 675, 203, 121)
@@ -327,6 +312,55 @@ internal class CherrySymbolsWindow(
     override fun onDetached() {
         inputBar.view.visibility = previousInputBarVisibility
         manager.view.layoutParams = manager.view.layoutParams.apply { height = previousWindowHeight }
+    }
+}
+
+private class SymbolScrollView(
+    context: Context,
+    private val grid: LinearLayout,
+    private val onLayoutComplete: () -> Unit,
+) : ScrollView(context) {
+    private val pageScroller = OverScroller(context)
+
+    init {
+        isVerticalScrollBarEnabled = false
+        overScrollMode = View.OVER_SCROLL_NEVER
+        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val rowHeight = (MeasureSpec.getSize(heightMeasureSpec) / 4f).roundToInt()
+        for (i in 0 until grid.childCount) {
+            grid.getChildAt(i).layoutParams.height = rowHeight
+        }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        onLayoutComplete()
+    }
+
+    fun scrollPageTo(target: Int) {
+        pageScroller.startScroll(0, scrollY, 0, target - scrollY, 500)
+        postInvalidateOnAnimation()
+    }
+
+    fun stopPageScroll() {
+        pageScroller.forceFinished(true)
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) stopPageScroll()
+        return super.dispatchTouchEvent(event)
+    }
+
+    override fun computeScroll() {
+        super.computeScroll()
+        if (pageScroller.computeScrollOffset()) {
+            scrollTo(0, pageScroller.currY)
+            postInvalidateOnAnimation()
+        }
     }
 }
 
