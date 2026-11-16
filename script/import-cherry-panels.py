@@ -43,6 +43,8 @@ parser.add_argument("--cherry-alphabet-footers", nargs=2, metavar=("CHINESE", "E
                     help="1116 x 186 portrait alphabet footer captures from y=2270")
 parser.add_argument("--cherry-alphabet-top", type=Path,
                     help="1116 x 136 idle CHERRY toolbar and first thirteen panel rows from y=1631")
+parser.add_argument("--cherry-active-toolbar", nargs=2, metavar=("TRADITIONAL", "TRANSLATION"), type=Path,
+                    help="1116 x 123 CHERRY toolbar crops with Traditional and Translation enabled")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -557,7 +559,16 @@ theme["preset_color_schemes"]["baidu_cherry"].update(
     popup_text_color="0x666666",
     hilited_popup_text_color="0xbfbfbf",
 )
-Image.open(args.translation_reference).crop((366,1535,558,1658)).save(assets/"tool-translate-on.png")
+if args.cherry_active_toolbar:
+    for name, capture, left, right in zip(
+        ("script", "translate"), args.cherry_active_toolbar, (177, 366), (366, 558),
+    ):
+        toolbar = Image.open(capture).convert("RGB")
+        if toolbar.size != (1116, 123):
+            raise ValueError("Expected a 1116 x 123 active CHERRY toolbar crop")
+        toolbar.crop((left, 0, right, 123)).save(assets / f"tool-{name}-on.png")
+else:
+    Image.open(args.translation_reference).crop((366,1535,558,1658)).save(assets/"tool-translate-on.png")
 keys["CherryTranslate"] = {
     "label": "翻译", "send": "FUNCTION", "command": "cherry_translation", "toggle": "cherry_translation",
 }
