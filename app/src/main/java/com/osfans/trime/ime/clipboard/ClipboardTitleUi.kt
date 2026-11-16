@@ -162,12 +162,13 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
 
 internal class CherryClipboardTabBackground(context: Context, private val horizontalOffset: Float) : Drawable() {
     private val curveWidth = context.dp(16.5f)
-    private val divider = context.dp(0.5f)
+    private val edgeInset = context.dp(0.5f)
+    private val strokeWidth = context.dp(0.6f).roundToInt().coerceAtLeast(1).toFloat()
     private val overhang = context.dp(8.5f)
     private val leftExtension = context.dp(1f / 3f)
     private val rightExtension = context.dp(4f / 3f)
-    private val topInset = context.dp(0.4f)
-    private val bottomInset = context.dp(0.5f)
+    private val topInset = context.dp(1f / 6f)
+    private val bottomInset = context.dp(2f / 3f)
     private val path = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var opacity = 255
@@ -175,8 +176,8 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
     override fun onBoundsChange(bounds: Rect) {
         val left = bounds.left - overhang - leftExtension + horizontalOffset
         val right = bounds.right + overhang + rightExtension + horizontalOffset
-        val top = bounds.top + divider + topInset
-        val bottom = bounds.bottom - divider - bottomInset
+        val top = bounds.top + edgeInset + topInset
+        val bottom = bounds.bottom - edgeInset - bottomInset
         val inset = curveWidth.coerceAtMost(bounds.width() / 2f)
         path.reset()
         path.moveTo(left, bottom)
@@ -191,11 +192,21 @@ internal class CherryClipboardTabBackground(context: Context, private val horizo
         paint.alpha = opacity
         canvas.drawPath(path, paint)
 
+        val top = bounds.top + edgeInset + topInset
+        val bottom = bounds.bottom - edgeInset - bottomInset
+        val left = bounds.left - overhang - leftExtension + horizontalOffset
+        val right = bounds.right + overhang + rightExtension + horizontalOffset
+        val inset = curveWidth.coerceAtMost(bounds.width() / 2f)
+        val saved = canvas.save()
+        canvas.clipRect(left - strokeWidth, top, right + strokeWidth, bottom + strokeWidth / 2f)
         paint.style = Paint.Style.STROKE
-        paint.color = 0xFF727272.toInt()
-        paint.alpha = opacity
-        paint.strokeWidth = divider
+        paint.color = 0xFFB3B3B3.toInt()
+        paint.alpha = (73 * opacity / 255f).roundToInt()
+        paint.strokeWidth = strokeWidth
         canvas.drawPath(path, paint)
+        paint.strokeWidth *= 1.5f
+        canvas.drawLine(left + inset, top, right - inset, top, paint)
+        canvas.restoreToCount(saved)
     }
 
     override fun setAlpha(alpha: Int) {
