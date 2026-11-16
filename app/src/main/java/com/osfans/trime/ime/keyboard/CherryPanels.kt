@@ -76,13 +76,7 @@ internal class CherryNumberWindow(
         cell(hitTarget(context, "符号") {
             manager.attachWindow(CherrySymbolsWindow(di, catalog) { manager.attachWindow(this@CherryNumberWindow) })
         }.withNumericPress("symbols"), 660, 527, 220, 175)
-        val backspace = GestureFrame(context).apply {
-            contentDescription = "退格"
-            isRepeatable = true
-            repeatDelayMillis = 450
-            repeatIntervalMillis = 175
-            setOnClickListener { key("BackSpace") }
-        }.withNumericPress("backspace")
+        val backspace = cherryBackspace(context) { key("BackSpace") }.withNumericPress("backspace")
         cell(backspace, 890, 2, 226, 175)
         val enter = label(context, enterKey.keyLabel, 14f) { key("Return") }.apply {
             withNumericPress("enter", scope.drawable("cherry-number-enter.png"))
@@ -184,7 +178,7 @@ internal class CherrySymbolsWindow(
         cell(lock, 20, 675, 222, 121)
         cell(previous, 243, 675, 203, 121)
         cell(next, 447, 675, 214, 121)
-        cell(hitTarget(context, "退格") {
+        cell(cherryBackspace(context) {
             actions.listener.onAction(scope.theme.resolveAction("BackSpace"))
         }, 662, 675, 210, 121)
         cell(hitTarget(context, "返回", onReturn), 873, 675, 226, 121)
@@ -259,6 +253,14 @@ internal class CherrySymbolsWindow(
         inputBar.view.visibility = previousInputBarVisibility
         manager.view.layoutParams = manager.view.layoutParams.apply { height = previousWindowHeight }
     }
+}
+
+private fun cherryBackspace(context: Context, click: () -> Unit) = GestureFrame(context).apply {
+    contentDescription = "退格"
+    isRepeatable = true
+    repeatDelayMillis = 450
+    repeatIntervalMillis = 175
+    setOnClickListener { click() }
 }
 
 private fun hitTarget(context: Context, description: String, click: () -> Unit) = View(context).apply {
