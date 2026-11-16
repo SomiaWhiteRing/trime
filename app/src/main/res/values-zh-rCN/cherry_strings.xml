@@ -20,6 +20,9 @@
     <string name="cherry_phrase_unfavorite">取消收藏</string>
     <string name="cherry_phrase_send">发送</string>
     <string name="cherry_phrase_undo">撤回</string>
+    <string name="cherry_library_default">默认分组</string>
+    <string name="cherry_library_add_group">添加分组</string>
+    <string name="cherry_library_group_hint">请填写分组名称，最多6个字符</string>
     <string name="cherry_phrase_confirm">确认</string>
     <string name="cherry_clipboard_phrases">常用语</string>
     <string name="cherry_translation_hint">中文与日语互译</string>

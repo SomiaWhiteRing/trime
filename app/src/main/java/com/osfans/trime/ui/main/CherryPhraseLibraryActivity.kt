@@ -1,0 +1,246 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+package com.osfans.trime.ui.main
+
+import android.app.Activity
+import android.app.Dialog
+import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
+import android.text.InputFilter
+import android.view.Gravity
+import android.view.View
+import android.view.Window
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import androidx.core.widget.doAfterTextChanged
+import com.osfans.trime.R
+import com.osfans.trime.core.data.DataManager
+import com.osfans.trime.data.db.CollectionHelper
+import com.osfans.trime.data.db.DatabaseBean
+import com.osfans.trime.util.AppUtils
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import splitties.dimensions.dp
+
+class CherryPhraseLibraryActivity : Activity() {
+    private val scope = MainScope()
+    private val prefs by lazy { getSharedPreferences("cherry_phrase_library", MODE_PRIVATE) }
+    private val groups by lazy {
+        val stored = JSONArray(prefs.getString("groups", "[]") ?: "[]")
+        MutableList(stored.length(), stored::getString)
+    }
+    private lateinit var tabs: LinearLayout
+    private lateinit var rows: LinearLayout
+    private var selected = 1
+    private var phrases = emptyList<DatabaseBean>()
+
+    private fun artwork(name: String): BitmapDrawable? {
+        val path = DataManager.userDataDir.resolve("backgrounds/baidu_cherry/$name.png")
+        return BitmapFactory.decodeFile(path.path)?.let { BitmapDrawable(resources, it) }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.statusBarColor = 0xFFDEEDFF.toInt()
+        window.navigationBarColor = Color.WHITE
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+        }
+        val header = FrameLayout(this).apply {
+            val reference = artwork("clipboard-phrase-library-header")
+            background = reference ?: GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0xFFDEEDFF.toInt(), Color.WHITE),
+            )
+            addView(TextView(context).apply {
+                text = if (reference == null) "‹" else ""
+                textSize = 32f
+                gravity = Gravity.CENTER
+                contentDescription = context.getText(android.R.string.cancel)
+                setOnClickListener { finish() }
+            }, FrameLayout.LayoutParams(dp(48), dp(56)))
+            if (reference == null) {
+                addView(TextView(context).apply {
+                    setText(R.string.cherry_clipboard_phrases)
+                    textSize = 18f
+                }, FrameLayout.LayoutParams(dp(90), dp(48)).apply {
+                    marginStart = dp(128)
+                    topMargin = dp(68)
+                })
+            }
+        }
+        root.addView(header, LinearLayout.LayoutParams(-1, dp(176)))
+        val controls = FrameLayout(this)
+        tabs = LinearLayout(this)
+        controls.addView(HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(tabs)
+        }, FrameLayout.LayoutParams(-1, -1).apply { marginEnd = dp(60) })
+        controls.addView(TextView(this).apply {
+            text = "⊕"
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setTextColor(0xFF7B8492.toInt())
+            contentDescription = context.getText(R.string.cherry_library_add_group)
+            setOnClickListener { addGroup() }
+        }, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.END or Gravity.BOTTOM).apply { marginEnd = dp(28) })
+        root.addView(controls, LinearLayout.LayoutParams(-1, dp(84)))
+        rows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(18), 0, 0, 0) }
+        root.addView(ScrollView(this).apply { addView(rows) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(root)
+        refreshTabs()
+        scope.launch {
+            CollectionHelper.observeRecords().collect { records ->
+                phrases = records
+                refreshRows()
+            }
+        }
+    }
+
+    private fun refreshTabs() {
+        tabs.removeAllViews()
+        val titles = listOf(getString(R.string.collect), getString(R.string.cherry_library_default)) + groups
+        for ((index, title) in titles.withIndex()) {
+            tabs.addView(FrameLayout(this).apply {
+                addView(TextView(context).apply {
+                    text = title
+                    textSize = 14f
+                    gravity = Gravity.CENTER
+                    setPadding(dp(12), 0, dp(12), 0)
+                    setTextColor(Color.BLACK)
+                }, FrameLayout.LayoutParams(-2, dp(38), Gravity.BOTTOM).apply { bottomMargin = dp(18) })
+                if (selected == index) addView(View(context).apply {
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(2f)
+                        setColor(0xFF008CFF.toInt())
+                    }
+                }, FrameLayout.LayoutParams(dp(26), dp(3), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+                    bottomMargin = dp(18)
+                })
+                isSelected = index == selected
+                setOnClickListener {
+                    selected = index
+                    refreshTabs()
+                    refreshRows()
+                }
+            }, LinearLayout.LayoutParams(-2, -1))
+        }
+    }
+
+    private fun refreshRows() {
+        rows.removeAllViews()
+        val visible = when (selected) {
+            0 -> phrases.filter { it.pinned }
+            1 -> phrases.filterNot { it.recentOnly }
+            else -> emptyList()
+        }
+        for (phrase in visible) {
+            rows.addView(TextView(this).apply {
+                text = phrase.text
+                textSize = 14f
+                setTextColor(Color.BLACK)
+                gravity = Gravity.CENTER_VERTICAL
+                maxLines = 1
+                setOnClickListener { AppUtils.launchClipEdit(this@CherryPhraseLibraryActivity, phrase.id, ClipEditActivity.FROM_COLLECTION) }
+            }, LinearLayout.LayoutParams(-1, dp(43)))
+            rows.addView(View(this).apply { setBackgroundColor(0xFFECECEC.toInt()) }, LinearLayout.LayoutParams(-1, dp(1f / 3f).toInt().coerceAtLeast(1)))
+        }
+    }
+
+    private fun addGroup() {
+        val dialog = Dialog(this).apply { requestWindowFeature(Window.FEATURE_NO_TITLE) }
+        val surface = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(25), dp(14), dp(25), dp(25))
+            background = GradientDrawable().apply {
+                val r = dp(16f)
+                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                setColor(Color.WHITE)
+            }
+        }
+        surface.addView(TextView(this).apply {
+            setText(R.string.cherry_library_add_group)
+            gravity = Gravity.CENTER
+            textSize = 16f
+            setTextColor(Color.BLACK)
+        }, LinearLayout.LayoutParams(-1, dp(44)))
+        val input = EditText(this).apply {
+            setSingleLine()
+            filters = arrayOf(InputFilter.LengthFilter(6))
+            setHint(R.string.cherry_library_group_hint)
+            textSize = 14f
+            setPadding(dp(14), 0, dp(57), 0)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(22f)
+                setColor(0xFFF0F0F0.toInt())
+            }
+        }
+        val count = TextView(this).apply {
+            gravity = Gravity.CENTER
+            setTextColor(0xFFA0A0A0.toInt())
+            text = "0/6"
+        }
+        surface.addView(FrameLayout(this).apply {
+            addView(input, FrameLayout.LayoutParams(-1, -1))
+            addView(count, FrameLayout.LayoutParams(dp(46), -1, Gravity.END))
+        }, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(7) })
+        val buttons = LinearLayout(this)
+        fun button(label: Int, backgroundColor: Int, foreground: Int, action: () -> Unit) = TextView(this).apply {
+            setText(label)
+            setTextColor(foreground)
+            gravity = Gravity.CENTER
+            textSize = 15f
+            background = GradientDrawable().apply {
+                cornerRadius = dp(22f)
+                setColor(backgroundColor)
+            }
+            setOnClickListener { action() }
+            buttons.addView(this, LinearLayout.LayoutParams(0, -1, 1f).apply { marginEnd = dp(5); marginStart = dp(5) })
+        }
+        button(R.string.cancel, 0xFFF3F3F3.toInt(), Color.BLACK) { dialog.dismiss() }
+        val confirm = button(R.string.cherry_phrase_confirm, 0xFF4B8FFF.toInt(), Color.WHITE) {
+            val title = input.text.toString().trim()
+            groups.add(title)
+            prefs.edit().putString("groups", JSONArray(groups).toString()).apply()
+            selected = groups.lastIndex + 2
+            refreshTabs()
+            refreshRows()
+            dialog.dismiss()
+        }
+        fun updateButton() {
+            val name = input.text.toString().trim()
+            count.text = "${input.length()}/6"
+            confirm.isEnabled = name.isNotEmpty() && name !in groups &&
+                name != getString(R.string.cherry_library_default) && name != getString(R.string.collect)
+            confirm.alpha = if (confirm.isEnabled) 1f else 0.32f
+        }
+        input.doAfterTextChanged { updateButton() }
+        updateButton()
+        surface.addView(buttons, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(17) })
+        dialog.setContentView(surface)
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setGravity(Gravity.BOTTOM)
+        }
+        dialog.show()
+        dialog.window?.setLayout(-1, -2)
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
+}

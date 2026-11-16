@@ -59,6 +59,7 @@ import com.osfans.trime.ime.segments.SegmentsWindow
 import com.osfans.trime.ime.translation.showClipboardTranslation
 import com.osfans.trime.ime.window.BoardWindow
 import com.osfans.trime.ime.window.BoardWindowManager
+import com.osfans.trime.ui.main.CherryPhraseLibraryActivity
 import com.osfans.trime.ui.main.ClipEditActivity
 import com.osfans.trime.util.AppUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -899,6 +900,15 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     recyclerView.scrollToPosition(0)
                 }
                 labels.forEach { (filter, label) -> label.setOnClickListener { select(filter) } }
+                filters.addView(ImageView(context).apply {
+                    scaleType = ImageView.ScaleType.FIT_XY
+                    contentDescription = context.getText(R.string.cherry_clipboard_phrases)
+                    setImageDrawable(scope.drawable("clipboard-phrase-library-entry.png"))
+                    if (drawable == null) setImageResource(android.R.drawable.ic_menu_preferences)
+                    setOnClickListener {
+                        context.startActivity(Intent(context, CherryPhraseLibraryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }, LinearLayout.LayoutParams(context.dp(39), LinearLayout.LayoutParams.MATCH_PARENT))
                 select(phraseFilter.value)
                 val randomGrid = createRandomPhraseGrid()
                 fun showMode(mode: CherrySendMode) {

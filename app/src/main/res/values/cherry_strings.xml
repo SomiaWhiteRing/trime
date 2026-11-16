@@ -21,6 +21,9 @@
     <string name="cherry_phrase_unfavorite">Remove from favorites</string>
     <string name="cherry_phrase_send">Send</string>
     <string name="cherry_phrase_undo">Undo</string>
+    <string name="cherry_library_default">Default group</string>
+    <string name="cherry_library_add_group">Add group</string>
+    <string name="cherry_library_group_hint">Enter a group name, up to 6 characters</string>
     <string name="cherry_phrase_confirm">Confirm</string>
     <string name="cherry_clipboard_phrases">Common phrases</string>
     <string name="cherry_translation_hint">Chinese and Japanese translation</string>

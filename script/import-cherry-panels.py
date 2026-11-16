@@ -51,11 +51,21 @@ parser.add_argument("--clipboard-phrase-cards", nargs=3, metavar=("PLAIN", "FAVO
                     help="1116 x 2480 portrait snapshots of the expanded CHERRY phrase card and delete confirmation")
 parser.add_argument("--clipboard-phrase-random", type=Path,
                     help="1116 x 826 CHERRY common-phrase random grid from y=1630")
+parser.add_argument("--clipboard-phrase-library", nargs=2, metavar=("LIBRARY", "FILTERS"), type=Path,
+                    help="CHERRY standalone common-phrase screenshot and keyboard filter capture")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.clipboard_phrase_library:
+    library, filters = (Image.open(path).convert("RGB") for path in args.clipboard_phrase_library)
+    if library.size != (1116, 2480) or filters.size != (1116, 826):
+        raise ValueError("Expected the CHERRY common-phrase library and keyboard panel captures")
+    library.crop((0, 72, 1116, 600)).save(assets / "clipboard-phrase-library-header.png")
+    filters.crop((513, 124, 630, 226)).save(assets / "clipboard-phrase-library-entry.png")
+
 
 if args.clipboard_phrase_random:
     reference = Image.open(args.clipboard_phrase_random).convert("RGB")
