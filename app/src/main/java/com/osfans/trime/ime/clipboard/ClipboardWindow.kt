@@ -465,7 +465,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 tabUi.label.translationY = context.dp(0.75f)
                 tabUi.label.setTextColor(if (active) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt())
                 tabUi.root.background = if (active) {
-                    CherryClipboardTabBackground(context.dp(15f), context.dp(0.5f), context.dp(8f))
+                    CherryClipboardTabBackground(context)
                 } else {
                     null
                 }
