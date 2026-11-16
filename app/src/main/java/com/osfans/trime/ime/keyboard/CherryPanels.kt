@@ -177,22 +177,18 @@ internal class CherrySymbolsWindow(
         }
         cell(lock, 20, 675, 222, 121)
         cell(previous, 243, 675, 203, 121)
-        cell(next, 447, 675, 214, 121)
+        cell(next, 447, 675, 217, 121)
         cell(cherryBackspace(context) {
             actions.listener.onAction(scope.theme.resolveAction("BackSpace"))
         }.apply {
             onSwipeLeft = {
                 actions.listener.onAction(scope.theme.resolveAction("CherryDeleteWord"))
             }
+            background = footerBackground("backspace")
         }, 662, 675, 210, 121)
-        val returnKey = hitTarget(context, "返回", onReturn)
-        scope.drawable("cherry-symbol-return-pressed.png")?.let { pressed ->
-            returnKey.background = StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_pressed), pressed)
-                addState(intArrayOf(), ColorDrawable(Color.TRANSPARENT))
-            }
-        }
-        cell(returnKey, 873, 675, 226, 121)
+        cell(hitTarget(context, "返回", onReturn).apply {
+            background = footerBackground("return")
+        }, 873, 675, 226, 121)
         render()
     }
 
@@ -247,11 +243,22 @@ internal class CherrySymbolsWindow(
             }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         }
         lock.isSelected = locked
-        lock.background = if (locked) null else scope.drawable("cherry-symbol-lock-unlocked.png")
+        lock.background = if (locked) footerBackground("lock-locked") else
+            footerBackground("lock-unlocked", scope.drawable("cherry-symbol-lock-unlocked.png"))
         previous.isEnabled = page > 0
         next.isEnabled = (page + 1) * 4 < rows.size
-        previous.background = if (previous.isEnabled) scope.drawable("cherry-symbol-previous-enabled.png") else null
-        next.background = if (next.isEnabled) null else scope.drawable("cherry-symbol-next-disabled.png")
+        previous.background = if (previous.isEnabled) {
+            footerBackground("previous", scope.drawable("cherry-symbol-previous-enabled.png"))
+        } else null
+        next.background = if (next.isEnabled) footerBackground("next") else scope.drawable("cherry-symbol-next-disabled.png")
+    }
+
+    private fun footerBackground(key: String, idle: Drawable? = null): Drawable? {
+        val pressed = scope.drawable("cherry-symbol-$key-pressed.png") ?: return idle
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), pressed)
+            addState(intArrayOf(), idle ?: ColorDrawable(Color.TRANSPARENT))
+        }
     }
 
     override fun onAttached() {
