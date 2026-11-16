@@ -135,12 +135,13 @@ class KeyView(
                         val pressedIdx = keyboard.firstPressedKeyIndex
                         val actionBehavior = if (pressedIdx != -1 && pressedIdx != id) KeyBehavior.COMBO else behavior
                         key.getAction(actionBehavior)?.let { action ->
-                            if (cherryLanguageArtwork != null && actionBehavior == KeyBehavior.CLICK) {
+                            val opensCherryNumbers = action.select == "number" && "cherry_edit" in theme.presetKeyboards
+                            if (actionBehavior == KeyBehavior.CLICK && (cherryLanguageArtwork != null || opensCherryNumbers)) {
                                 val switchMode = {
                                     if (isAttachedToWindow) processKeyAction(action, actionBehavior)
                                 }
-                                if (key.getLabel() == "En") {
-                                    // Draw the released language key before replacing the whole keyboard.
+                                if (opensCherryNumbers || key.getLabel() == "En") {
+                                    // Draw the released key before replacing the whole keyboard.
                                     doOnPreDraw { releasedKey -> releasedKey.postOnAnimation(switchMode) }
                                 } else {
                                     postOnAnimation { post(switchMode) }
