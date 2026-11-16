@@ -27,6 +27,11 @@ if args.reference_apk:
             (assets / f"clipboard-lock-{state}.png").write_bytes(apk.read(f"res/{resource_file}"))
         (assets / "clipboard-footer-settings.png").write_bytes(apk.read("res/4ST.png"))
         (assets / "clipboard-recommend-empty.png").write_bytes(apk.read("res/Z71.png"))
+        for action, resource_file in (
+            ("segment", "Kh8.png"), ("collect", "GzX.png"), ("edit", "Tsw.png"),
+            ("pin", "1VT.png"), ("unpin", "3Jg.png"), ("delete", "GyI.png"),
+        ):
+            (assets / f"clipboard-action-{action}.png").write_bytes(apk.read(f"res/{resource_file}"))
         for state, resource_file in (("off", "73x.png"), ("on", "HNF.png")):
             (assets / f"clipboard-switch-{state}.png").write_bytes(apk.read(f"res/{resource_file}"))
 

@@ -84,13 +84,14 @@ abstract class ClipboardAdapter(
             setBean(preview, bean.pinned)
             if (cherry && enableCollection) {
                 bindExpansion(preview, content, listOf(
-                    R.string.word_segment to { onSegment(bean) },
-                    R.string.collect to { onCollect(bean) },
-                    R.string.edit to { onEdit(bean.id) },
-                    (if (bean.pinned) R.string.simple_key_unpin else R.string.simple_key_pin) to {
+                    Triple(R.string.word_segment, "segment") { onSegment(bean) },
+                    Triple(R.string.collect, "collect") { onCollect(bean) },
+                    Triple(R.string.edit, "edit") { onEdit(bean.id) },
+                    Triple(if (bean.pinned) R.string.simple_key_unpin else R.string.simple_key_pin,
+                        if (bean.pinned) "unpin" else "pin") {
                         if (bean.pinned) onUnpin(bean.id) else onPin(bean.id)
                     },
-                    R.string.delete to { onDelete(bean.id) },
+                    Triple(R.string.delete, "delete") { onDelete(bean.id) },
                 ))
             }
             root.setOnClickListener {

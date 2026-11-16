@@ -119,14 +119,26 @@ class ClipboardBeanUi(
         pin.visibility = if (pinned) View.VISIBLE else View.GONE
     }
 
-    fun bindExpansion(preview: String, content: String, entries: List<Pair<Int, () -> Unit>>) {
+    fun bindExpansion(preview: String, content: String, entries: List<Triple<Int, String, () -> Unit>>) {
         actions.removeAllViews()
-        for ((label, action) in entries) {
-            actions.addView(TextView(ctx).apply {
-                setText(label)
+        for ((label, icon, action) in entries) {
+            actions.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                textSize = 12f
-                setTextColor(0xFFB3B3B3.toInt())
+                scope.drawable("clipboard-action-$icon.png")?.let { artwork ->
+                    addView(ImageView(ctx).apply {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setImageDrawable(artwork)
+                        setColorFilter(0xFFB3B3B3.toInt())
+                    }, LinearLayout.LayoutParams(ctx.dp(18), ctx.dp(18)).apply {
+                        bottomMargin = ctx.dp(4)
+                    })
+                }
+                addView(TextView(ctx).apply {
+                    setText(label)
+                    textSize = 13f
+                    setTextColor(0xFFB3B3B3.toInt())
+                })
                 setOnClickListener { action() }
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
         }
