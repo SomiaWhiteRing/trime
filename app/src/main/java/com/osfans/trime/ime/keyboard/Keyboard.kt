@@ -16,6 +16,7 @@ import splitties.bitflags.hasFlag
 import splitties.dimensions.dp
 import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /** 從YAML中加載鍵盤配置，包含多個[按鍵][Key]。  */
 @Suppress("ktlint:standard:property-naming")
@@ -278,6 +279,14 @@ class Keyboard(
                 column++
                 xPos += key.width
 
+                if (!context.isLandscapeMode()) {
+                    textKey.bounds?.let { bounds ->
+                        key.x = (bounds.left * allowedWidth).roundToInt()
+                        key.y = (bounds.top * keyboardHeight).roundToInt()
+                        key.width = (bounds.right * allowedWidth).roundToInt() - key.x
+                        key.height = (bounds.bottom * keyboardHeight).roundToInt() - key.y
+                    }
+                }
                 mKeys.add(key)
 
                 if (xPos > minWidth) {
@@ -286,7 +295,9 @@ class Keyboard(
             }
 
             // Expand keypress area to edge by distributing spacer widths to neighbors
-            if (expandKeypressArea && spacers.isNotEmpty()) {
+            if (expandKeypressArea && spacers.isNotEmpty() &&
+                (context.isLandscapeMode() || keys.none { it.bounds != null })
+            ) {
                 for ((spacerX, spacerWidth, spacerRow) in spacers) {
                     val (leftKeys, rightKeys) = mKeys.filter { it.row == spacerRow }.partition { it.x + it.width <= spacerX }
                     val leftKey = leftKeys.maxByOrNull { it.x }

@@ -46,7 +46,11 @@ data class TextKeyboard(
     }
 
     @Serializable
+    data class NormalizedBounds(val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+    @Serializable
     data class TextKey(
+        val bounds: NormalizedBounds? = null,
         val width: Float = 0f,
         val height: Float = 0f,
         val roundCorner: Float = -1f,

@@ -232,6 +232,18 @@ names={'F1':'CherrySymbols','F4':'Keyboard_default','F6':'CherryNumber','F7':'Ch
 def action(name):
     return names.get(name,name)
 
+def qwerty_bounds(item):
+    x, y, w, h = map(int, item["view_rect"].split(","))
+    # The original renderer starts the keycaps five skin units below the panel origin.
+    top = int((y + 5) * 702 / 647)
+    return {
+        "left": x / 1080,
+        "top": top / 702,
+        "right": (x + w) / 1080,
+        "bottom": (top + round((h + 2) * 702 / 647)) / 702,
+    }
+
+
 def populate(layout, builder, english=False):
     original=resource(f'port/{layout}.ini')
     rows={}
@@ -248,6 +260,7 @@ def populate(layout, builder, english=False):
             if x>end: ordered.append({'width': (x-end)*100/1080})
             existing=builder.get(action(item['center']),{})
             key=dict(existing,click=action(item['center']),width=w*100/1080)
+            key["bounds"] = qwerty_bounds(item)
             style_id = item["back_style"]
             key["key_back_color"] = f"cherry-keycap-{style_id}-{w}-normal.png"
             key["hilited_key_back_color"] = f"cherry-keycap-{style_id}-{w}-pressed.png"
