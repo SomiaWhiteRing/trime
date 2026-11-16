@@ -161,13 +161,13 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
 
 
 internal class CherryClipboardTabBackground(context: Context) : Drawable() {
-    private val curveWidth = context.dp(15f)
+    private val curveWidth = context.dp(16.5f)
     private val divider = context.dp(0.5f)
-    private val overhang = context.dp(8f)
+    private val overhang = context.dp(8.5f)
     private val leftExtension = context.dp(1f / 3f)
     private val rightExtension = context.dp(4f / 3f)
     private val topInset = context.dp(0.4f)
-    private val bottomInset = context.dp(1f / 6f)
+    private val bottomInset = context.dp(0.5f)
     private val path = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var opacity = 255
