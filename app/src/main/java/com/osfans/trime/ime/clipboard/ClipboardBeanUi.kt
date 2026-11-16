@@ -8,7 +8,11 @@ package com.osfans.trime.ime.clipboard
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
+import android.view.Gravity
 import android.view.View
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
@@ -34,16 +38,17 @@ class ClipboardBeanUi(
     override val ctx: Context,
     private val scope: ThemeScope,
     private val cherry: Boolean,
+    private val expandable: Boolean,
 ) : Ui {
     private val theme: Theme get() = scope.theme
 
     val textView =
         textView {
             minLines = 1
-            maxLines = 4
+            maxLines = if (expandable) 1 else 4
             textSize = if (cherry) 12f else 14f
             typeface = theme.fonts.key
-            if (cherry) setPaddingDp(8, 8, 8, 8) else setPaddingDp(8, 4, 8, 4)
+            if (cherry) setPaddingDp(8, 8, if (expandable) 37 else 8, 8) else setPaddingDp(8, 4, 8, 4)
             ellipsize = TextUtils.TruncateAt.END
             setTextColor(scope.colors.keyTextColor)
         }
@@ -57,8 +62,18 @@ class ClipboardBeanUi(
                 }
         }
 
-    val layout =
+    private val expand = ImageView(ctx).apply {
+        scaleType = ImageView.ScaleType.CENTER
+        contentDescription = ctx.getString(R.string.cherry_clipboard_expand)
+    }
+
+    private val actions = LinearLayout(ctx).apply {
+        visibility = View.GONE
+    }
+
+    private val layout =
         constraintLayout {
+            if (cherry) minimumHeight = dp(39)
             add(
                 textView,
                 lParams(matchParent, wrapContent) {
@@ -69,16 +84,30 @@ class ClipboardBeanUi(
                 pin,
                 lParams(dp(12), dp(12)) {
                     bottomOfParent(dp(2))
-                    endOfParent(dp(2))
+                    endOfParent(dp(if (expandable) 31 else 2))
                 },
             )
+            if (expandable) {
+                add(expand, lParams(dp(34), dp(39)) {
+                    endOfParent()
+                    centerVertically()
+                })
+            }
         }
 
     override val root =
         GestureFrame(ctx).apply {
             isClickable = true
             minimumHeight = dp(if (cherry) 39 else 30)
-            add(layout, lParams(matchParent, matchParent))
+            if (expandable) {
+                add(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(layout, LinearLayout.LayoutParams(matchParent, wrapContent))
+                    addView(actions, LinearLayout.LayoutParams(matchParent, dp(38)))
+                }, lParams(matchParent, wrapContent))
+            } else {
+                add(layout, lParams(matchParent, matchParent))
+            }
             layoutParams = lParams(matchParent, wrapContent)
         }
 
@@ -88,6 +117,28 @@ class ClipboardBeanUi(
     ) {
         textView.text = text
         pin.visibility = if (pinned) View.VISIBLE else View.GONE
+    }
+
+    fun bindExpansion(preview: String, content: String, entries: List<Pair<Int, () -> Unit>>) {
+        actions.removeAllViews()
+        for ((label, action) in entries) {
+            actions.addView(TextView(ctx).apply {
+                setText(label)
+                gravity = Gravity.CENTER
+                textSize = 12f
+                setTextColor(0xFFB3B3B3.toInt())
+                setOnClickListener { action() }
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+        }
+        val setExpanded = { expanded: Boolean ->
+            actions.visibility = if (expanded) View.VISIBLE else View.GONE
+            textView.maxLines = if (expanded) 6 else 1
+            textView.text = if (expanded) content else preview
+            expand.rotation = if (expanded) 180f else 0f
+        }
+        expand.setImageResource(R.drawable.ic_cherry_clipboard_expand)
+        expand.setOnClickListener { setExpanded(actions.visibility != View.VISIBLE) }
+        setExpanded(false)
     }
 
     /** Restyles the row after a scheme switch. */

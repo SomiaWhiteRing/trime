@@ -70,7 +70,7 @@ abstract class ClipboardAdapter(
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int,
-    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope, cherry))
+    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope, cherry, cherry && enableCollection))
 
     override fun onBindViewHolder(
         holder: ViewHolder,
@@ -79,7 +79,20 @@ abstract class ClipboardAdapter(
         val bean = getItem(position) ?: return
         with(holder.ui) {
             refreshColors()
-            setBean(excerptText(bean.text ?: ""), bean.pinned)
+            val content = bean.text.orEmpty()
+            val preview = excerptText(content)
+            setBean(preview, bean.pinned)
+            if (cherry && enableCollection) {
+                bindExpansion(preview, content, listOf(
+                    R.string.word_segment to { onSegment(bean) },
+                    R.string.collect to { onCollect(bean) },
+                    R.string.edit to { onEdit(bean.id) },
+                    (if (bean.pinned) R.string.simple_key_unpin else R.string.simple_key_pin) to {
+                        if (bean.pinned) onUnpin(bean.id) else onPin(bean.id)
+                    },
+                    R.string.delete to { onDelete(bean.id) },
+                ))
+            }
             root.setOnClickListener {
                 onPaste(bean)
             }

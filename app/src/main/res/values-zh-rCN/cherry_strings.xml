@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="cherry_clipboard_all">全部</string>
+    <string name="cherry_clipboard_expand">展开剪贴板记录</string>
     <string name="cherry_clipboard_recommend">推荐</string>
     <string name="cherry_clipboard_recent">最近</string>
     <string name="cherry_clipboard_text">文本</string>
