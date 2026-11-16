@@ -413,8 +413,8 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
 
     internal fun sendRecommendationInCurrentEditor(): Boolean {
         val options = currentInputEditorInfo?.imeOptions ?: return false
-        return options and EditorInfo.IME_MASK_ACTION == EditorInfo.IME_ACTION_SEND &&
-            options and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0 &&
+        val action = options and EditorInfo.IME_MASK_ACTION
+        return (action == EditorInfo.IME_ACTION_SEND || action == EditorInfo.IME_ACTION_DONE) &&
             currentInputConnection?.performEditorAction(EditorInfo.IME_ACTION_SEND) == true
     }
 
