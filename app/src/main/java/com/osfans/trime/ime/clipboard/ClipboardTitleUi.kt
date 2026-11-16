@@ -38,6 +38,8 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
         if (cherry) {
             setPadding(dp(37), 0, 0, 0)
             horizontalTabMarginDp = 2
+            clipChildren = false
+            clipToPadding = false
         }
     }
 
@@ -85,16 +87,17 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
 internal class CherryClipboardTabBackground(
     private val padding: Float,
     private val divider: Float,
+    private val overhang: Float,
 ) : Drawable() {
     private val path = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var opacity = 255
 
     override fun onBoundsChange(bounds: Rect) {
-        val left = bounds.left.toFloat()
-        val right = bounds.right.toFloat()
-        val top = bounds.top.toFloat()
-        val bottom = bounds.bottom.toFloat()
+        val left = bounds.left - overhang
+        val right = bounds.right + overhang
+        val top = bounds.top + divider
+        val bottom = bounds.bottom - divider
         val inset = padding.coerceAtMost(bounds.width() / 2f)
         path.reset()
         path.moveTo(left, bottom)
@@ -105,19 +108,16 @@ internal class CherryClipboardTabBackground(
 
     override fun draw(canvas: Canvas) {
         paint.style = Paint.Style.FILL
-        paint.color = 0xFF363636.toInt()
+        paint.color = 0xFF353535.toInt()
         paint.alpha = opacity
         canvas.drawPath(path, paint)
 
         paint.style = Paint.Style.STROKE
-        paint.color = 0xFF5E5E5E.toInt()
+        paint.color = 0xFF727272.toInt()
         paint.alpha = opacity
         paint.strokeWidth = divider
         canvas.drawPath(path, paint)
 
-        val inset = padding.coerceAtMost(bounds.width() / 2f)
-        paint.strokeWidth = divider * 1.5f
-        canvas.drawLine(bounds.left + inset, bounds.top.toFloat(), bounds.right - inset, bounds.top.toFloat(), paint)
     }
 
     override fun setAlpha(alpha: Int) {
