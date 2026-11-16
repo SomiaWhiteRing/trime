@@ -29,7 +29,7 @@ if args.reference_apk:
         (assets / "clipboard-recommend-empty.png").write_bytes(apk.read("res/Z71.png"))
         for action, resource_file in (
             ("segment", "Kh8.png"), ("translate", "N74.png"), ("search", "iRK.png"), ("collect", "GzX.png"), ("edit", "Tsw.png"),
-            ("pin", "1VT.png"), ("unpin", "3Jg.png"), ("delete", "GyI.png"),
+            ("pin", "1VT.png"), ("unpin", "3Jg.png"), ("delete", "GyI.png"), ("multi-select", "6CO.png"),
         ):
             (assets / f"clipboard-action-{action}.png").write_bytes(apk.read(f"res/{resource_file}"))
         for state, resource_file in (("off", "73x.png"), ("on", "HNF.png")):

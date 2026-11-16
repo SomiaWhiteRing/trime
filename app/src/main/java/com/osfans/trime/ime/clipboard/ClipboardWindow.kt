@@ -21,6 +21,7 @@ import android.util.Patterns
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -32,6 +33,7 @@ import androidx.paging.LoadState
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.filter
+import androidx.viewpager2.widget.ViewPager2
 import com.osfans.trime.R
 import com.osfans.trime.data.db.ClipboardHelper
 import com.osfans.trime.data.db.CollectionHelper
@@ -117,6 +119,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private var clipboardCountJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
     private var translationPopup: PopupWindow? = null
+    private lateinit var selectionFooter: LinearLayout
+    private lateinit var selectionDelete: TextView
+    private lateinit var selectionAll: CheckBox
 
     private val clipboardBeansAdapter by lazy {
         object : ClipboardAdapter(scope, usesCherryLayout) {
@@ -146,6 +151,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 val text = bean.text?.takeUnless { it.isBlank() } ?: return
                 translationPopup?.dismiss()
                 translationPopup = showClipboardTranslation(clipboardLayout, text, service::insertTranslation)
+            }
+
+            override fun onMultiSelect(id: Int) {
+                val selected = selection.orEmpty()
+                updateSelection(if (id in selected) selected - id else selected + id)
             }
 
             override fun onPin(id: Int) {
@@ -237,6 +247,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         gravity = Gravity.CENTER
                         setPadding(context.dp(8), 0, context.dp(8), 0)
                         setOnClickListener {
+                                if (clipboardBeansAdapter.selection != null) updateSelection(null)
                             category.value = filter
                             refreshCategoryLabels()
                         }
@@ -305,6 +316,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                                         marginStart = context.dp(96)
                                     },
                                 )
+                                addView(createSelectionFooter(), FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                ))
                             },
                             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(37)),
                         )
@@ -314,6 +329,64 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 refreshCategoryLabels()
             }
         }
+    }
+
+    private fun createSelectionFooter() = LinearLayout(context).apply {
+        selectionFooter = this
+        gravity = Gravity.CENTER_VERTICAL
+        setBackgroundColor(0xFF424242.toInt())
+        setPadding(context.dp(10), 0, context.dp(10), 0)
+        isClickable = true
+        visibility = View.GONE
+        selectionAll = CheckBox(context).apply {
+            setText(R.string.cherry_clipboard_select_all)
+            setTextColor(0xFFB3B3B3.toInt())
+            setOnClickListener {
+                val select = isChecked
+                val filter = category.value
+                service.lifecycleScope.launch {
+                    val ids = ClipboardHelper.clipboardRecords().filter(historyFilter(filter)).map { it.id }.toSet()
+                    if (clipboardBeansAdapter.selection != null && category.value == filter) {
+                        updateSelection(if (select) ids else emptySet())
+                        selectionAll.isChecked = select && ids.isNotEmpty()
+                    }
+                }
+            }
+        }
+        addView(selectionAll)
+        addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+        addView(TextView(context).apply {
+            setText(R.string.cancel)
+            setTextColor(0xFFB3B3B3.toInt())
+            gravity = Gravity.CENTER
+            setOnClickListener { updateSelection(null) }
+        }, LinearLayout.LayoutParams(context.dp(56), LinearLayout.LayoutParams.MATCH_PARENT))
+        selectionDelete = TextView(context).apply {
+            setTextColor(0xFFB3B3B3.toInt())
+            gravity = Gravity.CENTER
+            setOnClickListener {
+                val ids = clipboardBeansAdapter.selection.orEmpty().toList()
+                if (ids.isNotEmpty()) {
+                    service.showDialog(AlertDialog.Builder(context)
+                        .setNegativeButton(R.string.cancel, null)
+                        .setPositiveButton(R.string.ok) { _, _ ->
+                            service.lifecycleScope.launch {
+                                ClipboardHelper.deleteByIds(ids)
+                                updateSelection(null)
+                            }
+                        }.create())
+                }
+            }
+        }
+        addView(selectionDelete, LinearLayout.LayoutParams(context.dp(77), LinearLayout.LayoutParams.MATCH_PARENT))
+    }
+
+    private fun updateSelection(ids: Set<Int>?) {
+        clipboardBeansAdapter.selection = ids
+        selectionFooter.visibility = if (ids == null) View.GONE else View.VISIBLE
+        selectionDelete.text = context.getString(R.string.cherry_clipboard_delete_count, ids.orEmpty().size)
+        selectionDelete.isEnabled = !ids.isNullOrEmpty()
+        selectionAll.isChecked = !ids.isNullOrEmpty() && ids.size == clipboardBeansAdapter.snapshot().items.size
     }
 
     private fun refreshCategoryLabels() {
@@ -447,13 +520,19 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         viewPager.apply {
             adapter = clipboardPagesAdapter
             isUserInputEnabled = !usesCherryLayout
+            if (usesCherryLayout) registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    if (position != 0 && clipboardBeansAdapter.selection != null) updateSelection(null)
+                }
+            })
         }
         titleUi.apply {
             tabLayout.onConfigureTab(viewPager) { tabUi, position ->
                 configureTab(tabUi, position)
             }
             backButton?.setOnClickListener {
-                if (!dismissSettings()) windowManager.attachWindow(KeyboardWindow)
+                if (clipboardBeansAdapter.selection != null) updateSelection(null)
+                else if (!dismissSettings()) windowManager.attachWindow(KeyboardWindow)
             }
             actionButton.setOnClickListener {
                 if (usesCherryLayout) {
@@ -581,23 +660,26 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun clipboardPages() = category.flatMapLatest { filter ->
         if (filter == Category.ALL) return@flatMapLatest clipboardBeansPager.flow
+        val matches = historyFilter(filter)
+        clipboardBeansPager.flow.map { page -> page.filter(matches) }
+    }
+
+    private fun historyFilter(filter: Category): (DatabaseBean) -> Boolean {
         val today = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
-        clipboardBeansPager.flow.map { page ->
-            page.filter { bean ->
-                val text = bean.text.orEmpty().trim()
-                when (filter) {
-                    Category.ALL -> true
-                    Category.RECENT -> bean.time >= today
-                    Category.TEXT -> text.isNotEmpty() &&
-                        !numericClip.matches(text) && !Patterns.WEB_URL.matcher(text).find()
-                    Category.NUMBER -> numericClip.matches(text)
-                    Category.LINK -> Patterns.WEB_URL.matcher(text).find()
-                }
+        return { bean ->
+            val text = bean.text.orEmpty().trim()
+            when (filter) {
+                Category.ALL -> true
+                Category.RECENT -> bean.time >= today
+                Category.TEXT -> text.isNotEmpty() &&
+                    !numericClip.matches(text) && !Patterns.WEB_URL.matcher(text).find()
+                Category.NUMBER -> numericClip.matches(text)
+                Category.LINK -> Patterns.WEB_URL.matcher(text).find()
             }
         }
     }

@@ -63,6 +63,12 @@ interface DatabaseDao {
     @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} ORDER BY pinned DESC, time DESC")
     fun allBeans(): PagingSource<Int, DatabaseBean>
 
+    @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME}")
+    suspend fun clipboardRecords(): List<DatabaseBean>
+
+    @Query("DELETE FROM ${DatabaseBean.TABLE_NAME} WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Int>)
+
     @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} WHERE id=:id LIMIT 1")
     suspend fun get(id: Int): DatabaseBean?
 

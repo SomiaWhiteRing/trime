@@ -3,6 +3,9 @@
     <string name="cherry_clipboard_all">全部</string>
     <string name="cherry_clipboard_expand">展开剪贴板记录</string>
     <string name="cherry_clipboard_search">搜索</string>
+    <string name="cherry_clipboard_multi_select">多选</string>
+    <string name="cherry_clipboard_select_all">全选</string>
+    <string name="cherry_clipboard_delete_count">删除(%1$d)</string>
     <string name="cherry_clipboard_translate">翻译</string>
     <string name="cherry_clipboard_original">原文</string>
     <string name="cherry_clipboard_translation_empty">哎呀，暂无翻译结果</string>

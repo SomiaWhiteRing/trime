@@ -11,6 +11,7 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.widget.ImageView
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.osfans.trime.R
@@ -70,6 +71,7 @@ class ClipboardBeanUi(
     private val actions = LinearLayout(ctx).apply {
         visibility = View.GONE
     }
+    private val checkbox = CheckBox(ctx).apply { visibility = View.GONE }
 
     private val layout =
         constraintLayout {
@@ -89,6 +91,10 @@ class ClipboardBeanUi(
             )
             if (expandable) {
                 add(expand, lParams(dp(34), dp(39)) {
+                    endOfParent()
+                    centerVertically()
+                })
+                add(checkbox, lParams(dp(34), dp(39)) {
                     endOfParent()
                     centerVertically()
                 })
@@ -120,6 +126,8 @@ class ClipboardBeanUi(
     }
 
     fun bindExpansion(preview: String, content: String, entries: List<Triple<Int, String, () -> Unit>>) {
+        checkbox.visibility = View.GONE
+        expand.visibility = View.VISIBLE
         actions.removeAllViews()
         for ((label, icon, action) in entries) {
             actions.addView(LinearLayout(ctx).apply {
@@ -151,6 +159,17 @@ class ClipboardBeanUi(
         expand.setImageResource(R.drawable.ic_cherry_clipboard_expand)
         expand.setOnClickListener { setExpanded(actions.visibility != View.VISIBLE) }
         setExpanded(false)
+    }
+
+    fun bindSelection(selected: Boolean, toggle: () -> Unit) {
+        actions.visibility = View.GONE
+        expand.visibility = View.GONE
+        textView.maxLines = 1
+        checkbox.visibility = View.VISIBLE
+        checkbox.isChecked = selected
+        checkbox.setOnClickListener { toggle() }
+        root.setOnClickListener { toggle() }
+        root.setOnLongClickListener(null)
     }
 
     /** Restyles the row after a scheme switch. */

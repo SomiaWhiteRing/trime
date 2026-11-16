@@ -62,6 +62,11 @@ abstract class ClipboardAdapter(
     }
 
     private var popupMenu: PopupMenu? = null
+    var selection: Set<Int>? = null
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
 
     class ViewHolder(
         val ui: ClipboardBeanUi,
@@ -82,6 +87,11 @@ abstract class ClipboardAdapter(
             val content = bean.text.orEmpty()
             val preview = excerptText(content)
             setBean(preview, bean.pinned)
+            val selected = selection
+            if (selected != null) {
+                bindSelection(bean.id in selected) { onMultiSelect(bean.id) }
+                return
+            }
             if (cherry && enableCollection) {
                 bindExpansion(preview, content, listOf(
                     Triple(R.string.word_segment, "segment") { onSegment(bean) },
@@ -94,12 +104,17 @@ abstract class ClipboardAdapter(
                         if (bean.pinned) onUnpin(bean.id) else onPin(bean.id)
                     },
                     Triple(R.string.delete, "delete") { onDelete(bean.id) },
+                    Triple(R.string.cherry_clipboard_multi_select, "multi-select") { onMultiSelect(bean.id) },
                 ))
             }
             root.setOnClickListener {
                 onPaste(bean)
             }
             root.setOnLongClickListener {
+                if (cherry && enableCollection) {
+                    onMultiSelect(bean.id)
+                    return@setOnLongClickListener true
+                }
                 val popup = PopupMenu(ctx, it)
                 val menu = popup.menu
                 val iconTint = ctx.styledColor(android.R.attr.colorControlNormal)
@@ -148,6 +163,7 @@ abstract class ClipboardAdapter(
 
     open fun onSearch(bean: DatabaseBean) {}
     open fun onTranslate(bean: DatabaseBean) {}
+    open fun onMultiSelect(id: Int) {}
 
     open fun onPin(id: Int) {}
 
