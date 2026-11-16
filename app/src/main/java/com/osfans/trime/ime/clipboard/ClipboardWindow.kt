@@ -711,7 +711,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     orientation = LinearLayout.VERTICAL
                     addView(CherryClipboardRecommendationView(context, scope, recommendations) { phrase ->
                         if (service.commitText(phrase)) {
-                            if (automaticRecommendationSend) service.sendRecommendationInCurrentEditor()
+                            if (automaticRecommendationSend && !clipboardReturnAfterPaste) service.sendRecommendationInCurrentEditor()
                             if (clipboardReturnAfterPaste) windowManager.attachWindow(KeyboardWindow)
                         }
                     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
