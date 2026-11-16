@@ -13,7 +13,6 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.view.View
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
@@ -32,6 +31,7 @@ import splitties.views.dsl.core.Ui
 import splitties.views.dsl.core.add
 import splitties.views.dsl.core.matchParent
 import splitties.views.dsl.core.wrapContent
+import kotlin.math.roundToInt
 
 class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope) : Ui {
     private val theme: Theme get() = scope.theme
@@ -65,18 +65,17 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     override val root = constraintLayout {
         if (cherry) {
             clipChildren = false
-            setBackgroundColor(0xFF434343.toInt())
-            add(
-                View(ctx).apply {
-                    background = GradientDrawable(
-                        GradientDrawable.Orientation.TOP_BOTTOM,
-                        intArrayOf(0xFF4F4F4F.toInt(), 0xFF353535.toInt()),
-                    )
-                },
-                lParams(matchParent, dp(1)) {
-                    topOfParent(dp(37) - 1)
-                },
-            )
+            setBackgroundColor(0xFF353535.toInt())
+            val stroke = dp(1f / 3).roundToInt().coerceAtLeast(1)
+            val divider = dp(37) - stroke
+            add(View(ctx).apply { setBackgroundColor(0xFF434343.toInt()) }, lParams(matchParent, divider) {
+                topOfParent()
+            })
+            listOf(0xFF4F4F4F.toInt(), 0xFF3B3B3B.toInt()).forEachIndexed { index, color ->
+                add(View(ctx).apply { setBackgroundColor(color) }, lParams(matchParent, stroke) {
+                    topOfParent(divider + index * stroke)
+                })
+            }
         }
         add(
             tabLayout,
