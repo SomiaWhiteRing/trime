@@ -7,6 +7,7 @@ package com.osfans.trime.ime.clipboard
 
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.content.res.ColorStateList
@@ -129,6 +130,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private val prefs = AppPrefs.defaultInstance().clipboard
     private val clipboardReturnAfterPaste by prefs.clipboardReturnAfterPaste
     private val lockUpdates = mutableListOf<() -> Unit>()
+    private val recommendationPreferences = service.getSharedPreferences("cherry_recommendations", Context.MODE_PRIVATE)
+    private var automaticRecommendationSend = recommendationPreferences.getBoolean("automatic_send", false)
 
     private val clipboardBeansPager by lazy {
         Pager(PagingConfig(pageSize = 16)) { ClipboardHelper.allBeans() }
@@ -376,6 +379,37 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 marginStart = context.dp(96)
             },
         )
+        val sendingMode = TextView(context).apply {
+            gravity = Gravity.CENTER
+            textSize = 14f
+            setTextColor(0xFFB3B3B3.toInt())
+        }
+        val updateMode = {
+            val label = if (automaticRecommendationSend) R.string.cherry_send_automatic else R.string.cherry_send_manual
+            val name = if (automaticRecommendationSend) "automatic" else "manual"
+            val artwork = if (context.getString(label) in setOf("手动", "自动")) {
+                scope.drawable("clipboard-recommend-send-$name.png")
+            } else null
+            sendingMode.foreground = artwork
+            sendingMode.text = context.getString(label) + " ▾"
+            sendingMode.setTextColor(if (artwork == null) 0xFFB3B3B3.toInt() else Color.TRANSPARENT)
+        }
+        updateMode()
+        sendingMode.setOnClickListener {
+            clipboardLayout.showPanelOverlay(createCherrySendModePanel(
+                context,
+                automaticRecommendationSend,
+                clipboardLayout::dismissPanelOverlay,
+            ) { automatic ->
+                automaticRecommendationSend = automatic
+                recommendationPreferences.edit().putBoolean("automatic_send", automatic).apply()
+                updateMode()
+                clipboardLayout.dismissPanelOverlay()
+            })
+        }
+        addView(sendingMode, FrameLayout.LayoutParams(context.dp(56), FrameLayout.LayoutParams.MATCH_PARENT).apply {
+            marginStart = context.dp(205)
+        })
     }
 
     private fun createSelectionFooter() = LinearLayout(context).apply {
@@ -456,8 +490,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     internal fun handleClipboardBack(commit: Boolean): Boolean {
-        if (clipboardLayout.isShowingTabChooser) {
-            if (commit) clipboardLayout.dismissTabChooser()
+        if (clipboardLayout.isShowingPanelOverlay) {
+            if (commit) clipboardLayout.dismissPanelOverlay()
             return true
         }
         return if (commit) clipboardLayout.dismissSegments() else clipboardLayout.isShowingSegments
@@ -675,8 +709,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 val content = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
                     addView(CherryClipboardRecommendationView(context, scope, recommendations) { phrase ->
-                        if (service.commitText(phrase) && clipboardReturnAfterPaste) {
-                            windowManager.attachWindow(KeyboardWindow)
+                        if (service.commitText(phrase)) {
+                            if (automaticRecommendationSend) service.sendRecommendationInCurrentEditor()
+                            if (clipboardReturnAfterPaste) windowManager.attachWindow(KeyboardWindow)
                         }
                     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
                     addView(createRecommendationFooter(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(29)))
@@ -975,7 +1010,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     override fun onDetached() {
-        clipboardLayout.dismissTabChooser()
+        clipboardLayout.dismissPanelOverlay()
         clipboardLayout.dismissSegments()
         deleteConfirmation?.dismiss()
         deleteConfirmation = null

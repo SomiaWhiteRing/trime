@@ -36,14 +36,14 @@ import kotlin.math.roundToInt
 class ClipboardLayout(
     context: Context,
     private val scope: ThemeScope,
-    private val attachTabChooser: (View) -> Unit,
+    private val attachPanelOverlay: (View) -> Unit,
 ) : ConstraintLayout(context) {
 
     val viewPager = view(::ViewPager2) {}
 
     val titleUi = ClipboardTitleUi(context, scope)
-    private var tabChooser: View? = null
-    internal val isShowingTabChooser get() = tabChooser != null
+    private var panelOverlay: View? = null
+    internal val isShowingPanelOverlay get() = panelOverlay != null
     private var settings: View? = null
     private var segments: View? = null
     internal val isShowingSegments get() = segments != null
@@ -57,20 +57,20 @@ class ClipboardLayout(
         )
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                dismissTabChooser()
+                dismissPanelOverlay()
                 dismissSegments()
             }
         })
     }
 
-    internal fun dismissTabChooser() {
-        val chooser = tabChooser ?: return
-        tabChooser = null
+    internal fun dismissPanelOverlay() {
+        val chooser = panelOverlay ?: return
+        panelOverlay = null
         (chooser.parent as? ViewGroup)?.removeView(chooser)
     }
 
     internal fun showSegments(content: View) {
-        dismissTabChooser()
+        dismissPanelOverlay()
         dismissSegments()
         segments = content
         add(content, lParams { centerInParent() })
@@ -84,7 +84,7 @@ class ClipboardLayout(
     }
 
     fun showSettings(content: View) {
-        dismissTabChooser()
+        dismissPanelOverlay()
         settings = content
         titleUi.setSettingsOpen(true)
         add(content, lParams { centerInParent() })
@@ -121,13 +121,13 @@ class ClipboardLayout(
     }
 
     fun toggleTabChooser(labels: List<Int>) {
-        if (tabChooser != null) {
-            dismissTabChooser()
+        if (panelOverlay != null) {
+            dismissPanelOverlay()
             return
         }
         val overlay = FrameLayout(context).apply {
             setBackgroundColor(0x30000000)
-            setOnClickListener { dismissTabChooser() }
+            setOnClickListener { dismissPanelOverlay() }
         }
         val tabs = FlexboxLayout(context).apply {
             flexWrap = FlexWrap.WRAP
@@ -163,7 +163,7 @@ class ClipboardLayout(
                     setTextColor(Color.TRANSPARENT)
                 }
                 setOnClickListener {
-                    dismissTabChooser()
+                    dismissPanelOverlay()
                     viewPager.setCurrentItem(index, false)
                 }
             }
@@ -177,7 +177,12 @@ class ClipboardLayout(
         overlay.addView(View(context).apply {
             setBackgroundColor(0xFF3C3C3C.toInt())
         }, FrameLayout.LayoutParams(matchParent, dp(1f / 3).roundToInt().coerceAtLeast(1)))
-        tabChooser = overlay
-        attachTabChooser(overlay)
+        showPanelOverlay(overlay)
+    }
+
+    internal fun showPanelOverlay(overlay: View) {
+        dismissPanelOverlay()
+        panelOverlay = overlay
+        attachPanelOverlay(overlay)
     }
 }

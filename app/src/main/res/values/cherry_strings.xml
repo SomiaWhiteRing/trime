@@ -29,4 +29,12 @@
     <string name="cherry_clipboard_regular_layout">Regular layout</string>
     <string name="cherry_clipboard_compact_layout">Compact layout</string>
     <string name="cherry_clipboard_count">%1$d/%2$d</string>
+    <string name="cherry_send_title">Sending mode</string>
+    <string name="cherry_send_manual">Manual</string>
+    <string name="cherry_send_automatic">Automatic</string>
+    <string name="cherry_send_manual_label">Send manually</string>
+    <string name="cherry_send_manual_detail">Tap the content, then tap Send</string>
+    <string name="cherry_send_automatic_label">Send automatically</string>
+    <string name="cherry_send_automatic_detail">Tap the content to send it in supported chat apps</string>
+    <string name="cherry_send_close">Close</string>
 </resources>

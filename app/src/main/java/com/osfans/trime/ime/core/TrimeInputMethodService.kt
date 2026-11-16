@@ -371,6 +371,15 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         commitText(text)
     }
 
+    internal fun sendRecommendationInCurrentEditor() {
+        val options = currentInputEditorInfo?.imeOptions ?: return
+        if (options and EditorInfo.IME_MASK_ACTION == EditorInfo.IME_ACTION_SEND &&
+            options and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0
+        ) {
+            currentInputConnection?.performEditorAction(EditorInfo.IME_ACTION_SEND)
+        }
+    }
+
     private fun handleReturnKey() {
         inputView?.translationPanel?.inputConnection?.let {
             it.performEditorAction(EditorInfo.IME_ACTION_DONE)

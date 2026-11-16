@@ -28,4 +28,12 @@
     <string name="cherry_clipboard_regular_layout">常规布局</string>
     <string name="cherry_clipboard_compact_layout">紧凑布局</string>
     <string name="cherry_clipboard_count">%1$d/%2$d</string>
+    <string name="cherry_send_title">发送方式选择</string>
+    <string name="cherry_send_manual">手动</string>
+    <string name="cherry_send_automatic">自动</string>
+    <string name="cherry_send_manual_label">手动发送</string>
+    <string name="cherry_send_manual_detail">先点内容，再点发送</string>
+    <string name="cherry_send_automatic_label">自动发送</string>
+    <string name="cherry_send_automatic_detail">点击内容，直接发送（支持微信、QQ等聊天应用）</string>
+    <string name="cherry_send_close">关闭</string>
 </resources>
