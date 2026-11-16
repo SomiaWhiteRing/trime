@@ -61,7 +61,7 @@ open class CompactCandidateViewAdapter(
     ): CandidateViewHolder {
         val ui = CandidateItemUi(context, scope)
         ui.root.apply {
-            minimumWidth = dp(40)
+            if ("cherry_edit" !in scope.theme.presetKeyboards) minimumWidth = dp(40)
             layoutParams = FlexboxLayoutManager.LayoutParams(wrapContent, matchParent)
         }
         return CandidateViewHolder(ui)

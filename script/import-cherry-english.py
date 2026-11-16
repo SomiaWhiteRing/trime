@@ -107,7 +107,8 @@ def configure_keyboard(theme_path):
     palette = theme["preset_color_schemes"]["baidu_cherry"]
     palette["hilited_candidate_back_color"] = "0x00000000"
     palette["hilited_candidate_text_color"] = "0xaa304e"
-    theme["style"]["candidate_padding"] = 8
+    # CHERRY's cand1.cnd assigns 66 px per cell at 1080 px skin width.
+    theme["style"]["candidate_padding"] = 11
     theme["style"]["candidate_text_size"] = 19
     presets = theme["preset_keys"]
     presets["CherryAsciiSwitch"] = {"label": "中", "send": "FUNCTION", "command": "cherry_language"}

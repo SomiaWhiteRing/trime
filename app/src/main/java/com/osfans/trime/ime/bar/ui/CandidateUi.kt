@@ -27,7 +27,8 @@ class CandidateUi(
 ) : Ui {
     private val theme: Theme get() = scope.theme
 
-    private val cherryArrow = "cherry_edit" in theme.presetKeyboards && scope.drawable("candidate-expand.png") != null
+    private val usesCherryLayout = "cherry_edit" in theme.presetKeyboards
+    private val cherryArrow = usesCherryLayout && scope.drawable("candidate-expand.png") != null
     private var unrolled = false
 
     val unrollButton =
@@ -52,7 +53,7 @@ class CandidateUi(
                 compatView,
                 lParams {
                     centerVertically()
-                    startOfParent(dp(theme.style.candidatePadding / 2))
+                    startOfParent(dp(if (usesCherryLayout) 0 else theme.style.candidatePadding / 2))
                     before(unrollButton)
                 },
             )
