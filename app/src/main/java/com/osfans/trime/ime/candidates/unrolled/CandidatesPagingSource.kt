@@ -13,7 +13,6 @@ import timber.log.Timber
 
 class CandidatesPagingSource(
     val rime: RimeSession,
-    val total: Int,
     val offset: Int,
     private val includeRawInputFallback: Boolean = false,
 ) : PagingSource<Int, CandidateProto>() {
@@ -21,23 +20,20 @@ class CandidatesPagingSource(
         // use candidate index for key, null means load from beginning (including offset)
         val startIndex = params.key ?: offset
         val pageSize = params.loadSize
-        Timber.d("getCandidates(offset=$startIndex, limit=$pageSize)")
+        val limit = pageSize + 1
+        Timber.d("getCandidates(offset=$startIndex, limit=$limit)")
         val candidates =
             rime.runOnReady {
-                val page = getCandidates(startIndex, pageSize)
+                val page = getCandidates(startIndex, limit)
                 if (includeRawInputFallback && startIndex == 0 && page.isEmpty()) {
                     val input = getRawInput()
                     if (input.isNotEmpty()) return@runOnReady arrayOf(CandidateProto(input, "", ""))
                 }
                 page
             }
-        val prevKey = if (startIndex >= pageSize) startIndex - pageSize else null
-        val nextKey = if (total > 0) {
-            if (startIndex + pageSize + 1 >= total) null else startIndex + pageSize
-        } else {
-            if (candidates.size < pageSize) null else startIndex + pageSize
-        }
-        return LoadResult.Page(candidates.toList(), prevKey, nextKey)
+        val prevKey = (startIndex - pageSize).coerceAtLeast(offset).takeIf { startIndex > offset }
+        val nextKey = (startIndex + pageSize).takeIf { candidates.size > pageSize }
+        return LoadResult.Page(candidates.take(pageSize), prevKey, nextKey)
     }
 
     // always reload from beginning

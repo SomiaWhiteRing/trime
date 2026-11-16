@@ -110,7 +110,6 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
             pagingSourceFactory = {
                 CandidatesPagingSource(
                     rime,
-                    total = compactCandidate.adapter.total,
                     offset = adapter.offset,
                     includeRawInputFallback = usesCherryLayout,
                 )
