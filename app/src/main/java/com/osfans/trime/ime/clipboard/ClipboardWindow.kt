@@ -23,6 +23,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
@@ -42,6 +43,7 @@ import com.osfans.trime.ime.core.InputTabLayout
 import com.osfans.trime.ime.core.TrimeInputMethodService
 import com.osfans.trime.ime.keyboard.KeyboardWindow
 import com.osfans.trime.ime.segments.SegmentsWindow
+import com.osfans.trime.ime.translation.showClipboardTranslation
 import com.osfans.trime.ime.window.BoardWindow
 import com.osfans.trime.ime.window.BoardWindowManager
 import com.osfans.trime.ui.main.ClipEditActivity
@@ -114,6 +116,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private var clipboardBeansSubmitJob: Job? = null
     private var clipboardCountJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
+    private var translationPopup: PopupWindow? = null
 
     private val clipboardBeansAdapter by lazy {
         object : ClipboardAdapter(scope, usesCherryLayout) {
@@ -137,6 +140,12 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 } catch (_: ActivityNotFoundException) {
                     // Search requires a browser.
                 }
+            }
+
+            override fun onTranslate(bean: DatabaseBean) {
+                val text = bean.text?.takeUnless { it.isBlank() } ?: return
+                translationPopup?.dismiss()
+                translationPopup = showClipboardTranslation(clipboardLayout, text, service::insertTranslation)
             }
 
             override fun onPin(id: Int) {
@@ -594,6 +603,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     override fun onDetached() {
+        translationPopup?.dismiss()
+        translationPopup = null
         clipboardBeansAdapter.dismissPopupMenu()
         collectionBeansAdapter.dismissPopupMenu()
         clipboardBeansSubmitJob?.cancel()

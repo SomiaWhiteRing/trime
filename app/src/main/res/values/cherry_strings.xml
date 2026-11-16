@@ -3,6 +3,9 @@
     <string name="cherry_clipboard_all">All</string>
     <string name="cherry_clipboard_expand">Expand clipboard item</string>
     <string name="cherry_clipboard_search">Search</string>
+    <string name="cherry_clipboard_translate">Translate</string>
+    <string name="cherry_clipboard_original">Original</string>
+    <string name="cherry_clipboard_translation_empty">No translation available</string>
     <string name="cherry_clipboard_recommend">Recommendations</string>
     <string name="cherry_clipboard_recommend_empty">哎呀，当前语料是空的～</string>
     <string name="cherry_clipboard_recent">Recent</string>

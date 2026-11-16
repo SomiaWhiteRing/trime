@@ -85,6 +85,7 @@ abstract class ClipboardAdapter(
             if (cherry && enableCollection) {
                 bindExpansion(preview, content, listOf(
                     Triple(R.string.word_segment, "segment") { onSegment(bean) },
+                    Triple(R.string.cherry_clipboard_translate, "translate") { onTranslate(bean) },
                     Triple(R.string.cherry_clipboard_search, "search") { onSearch(bean) },
                     Triple(R.string.collect, "collect") { onCollect(bean) },
                     Triple(R.string.edit, "edit") { onEdit(bean.id) },
@@ -146,6 +147,7 @@ abstract class ClipboardAdapter(
     abstract fun onPaste(bean: DatabaseBean)
 
     open fun onSearch(bean: DatabaseBean) {}
+    open fun onTranslate(bean: DatabaseBean) {}
 
     open fun onPin(id: Int) {}
 
