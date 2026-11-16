@@ -47,11 +47,33 @@ parser.add_argument("--cherry-active-toolbar", nargs=2, metavar=("TRADITIONAL", 
                     help="1116 x 123 CHERRY toolbar crops with Traditional and Translation enabled")
 parser.add_argument("--clipboard-phrase-filters", nargs=3, metavar=("FAVORITES", "RECENT", "DEFAULT"), type=Path,
                     help="1116 x 102 common-phrase filter strips from y=1754 in each selected state")
+parser.add_argument("--clipboard-phrase-cards", nargs=3, metavar=("PLAIN", "FAVORITE", "DELETE"), type=Path,
+                    help="1116 x 2480 portrait snapshots of the expanded CHERRY phrase card and delete confirmation")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.clipboard_phrase_cards:
+    plain, favorite, delete = [Image.open(path).convert("RGB") for path in args.clipboard_phrase_cards]
+    if any(source.size != (1116, 2480) for source in (plain, favorite, delete)):
+        raise ValueError("Expected 1116 x 2480 CHERRY phrase captures")
+    for name, source, edges in (
+        ("plain", plain, (24, 216, 408, 600)),
+        ("favorite", favorite, (24, 294, 486, 678)),
+    ):
+        for index, (left, right) in enumerate(zip(edges, edges[1:])):
+            source.crop((left, 1981, right, 2143)).save(assets / f"clipboard-phrase-card-{name}-{index}.png")
+    favorite.crop((47, 1914, 71, 1938)).save(assets / "clipboard-phrase-star.png")
+    dialog = delete.crop((108, 1033, 1008, 1447)).convert("RGBA")
+    for y in list(range(55)) + list(range(dialog.height - 55, dialog.height)):
+        for x in list(range(55)) + list(range(dialog.width - 55, dialog.width)):
+            red, green, blue, _ = dialog.getpixel((x, y))
+            if red == green == blue and red >= 54:
+                dialog.putpixel((x, y), (54, 54, 54, max(0, round((102 - red) * 255 / 48))))
+    dialog.save(assets / "clipboard-phrase-delete-dialog.png")
+
 
 if args.clipboard_phrase_filters:
     for name, capture, bounds in zip(

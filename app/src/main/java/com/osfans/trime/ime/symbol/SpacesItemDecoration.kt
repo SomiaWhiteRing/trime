@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 class SpacesItemDecoration(
     private val space: Int,
     private val horizontalSpace: Int = space,
+    private val bottomSpace: Int = space,
 ) : RecyclerView.ItemDecoration() {
     override fun getItemOffsets(
         outRect: Rect,
@@ -21,6 +22,6 @@ class SpacesItemDecoration(
         left = horizontalSpace
         top = space
         right = horizontalSpace
-        bottom = space
+        bottom = bottomSpace
     }
 }

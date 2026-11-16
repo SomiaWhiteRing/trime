@@ -20,9 +20,17 @@ import splitties.views.dsl.core.view
 import splitties.views.dsl.recyclerview.recyclerView
 import kotlin.math.roundToInt
 
-class ClipboardPageUi(override val ctx: Context, private val cherry: Boolean = false) : Ui {
+class ClipboardPageUi(
+    override val ctx: Context,
+    private val cherry: Boolean = false,
+    private val phrase: Boolean = false,
+) : Ui {
     private var compact = false
-    private val spacing = SpacesItemDecoration(if (cherry) ctx.dp(8f / 3f).toInt() else ctx.dp(4), if (cherry) 0 else ctx.dp(4))
+    private val spacing = if (phrase) {
+        SpacesItemDecoration(ctx.dp(8f / 3f).toInt(), 0, ctx.dp(7f / 3f).roundToInt())
+    } else {
+        SpacesItemDecoration(if (cherry) ctx.dp(8f / 3f).toInt() else ctx.dp(4), if (cherry) 0 else ctx.dp(4))
+    }
     private val divider by lazy {
         DividerItemDecoration(ctx, DividerItemDecoration.VERTICAL).apply {
             setDrawable(GradientDrawable().apply {
@@ -38,7 +46,7 @@ class ClipboardPageUi(override val ctx: Context, private val cherry: Boolean = f
         }, ctx.dp(8), ctx.dp(2), ctx.dp(8), ctx.dp(2))
     }
     val recyclerView = recyclerView {
-        if (cherry) setPadding(dp(8), dp(2), dp(8), dp(2))
+        if (cherry) setPadding(dp(8), if (phrase) 0 else dp(2), dp(8), dp(2))
         addItemDecoration(spacing)
     }
 
@@ -54,7 +62,7 @@ class ClipboardPageUi(override val ctx: Context, private val cherry: Boolean = f
         val background = if (compact && (recyclerView.adapter?.itemCount ?: 0) > 0) compactBackground else null
         if (recyclerView.background === background) return
         recyclerView.background = background
-        if (cherry) recyclerView.setPadding(ctx.dp(8), ctx.dp(2), ctx.dp(8), ctx.dp(2))
+        if (cherry) recyclerView.setPadding(ctx.dp(8), if (phrase) 0 else ctx.dp(2), ctx.dp(8), ctx.dp(2))
     }
 
     override val root = view(::FrameLayout) {

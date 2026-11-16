@@ -266,7 +266,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             }
 
             override fun onDelete(id: Int) {
-                service.lifecycleScope.launch { CollectionHelper.delete(id) }
+                if (usesCherryLayout) {
+                    deleteConfirmation?.dismiss()
+                    deleteConfirmation = showCherryPhraseDeleteConfirmation(clipboardLayout, scope) {
+                        service.lifecycleScope.launch { CollectionHelper.delete(id) }
+                    }
+                } else {
+                    service.lifecycleScope.launch { CollectionHelper.delete(id) }
+                }
             }
 
             override val enableCollection: Boolean = false
@@ -520,6 +527,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     internal fun handleClipboardBack(commit: Boolean): Boolean {
+        if (deleteConfirmation?.isShowing == true) {
+            if (commit) deleteConfirmation?.dismiss()
+            return true
+        }
         if (clipboardLayout.isShowingPanelOverlay) {
             if (commit) clipboardLayout.dismissPanelOverlay()
             return true
@@ -716,8 +727,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     private val collectionPage: ClipboardPageUi by lazy {
-        ClipboardPageUi(context, usesCherryLayout).apply {
-            if (usesCherryLayout) root.setBackgroundColor(0xFF353535.toInt())
+        ClipboardPageUi(context, usesCherryLayout, phrase = usesCherryLayout).apply {
+            if (usesCherryLayout) root.setBackgroundColor(0xFF363636.toInt())
             recyclerView.apply {
                 layoutManager = verticalLayoutManager()
                 adapter = collectionBeansAdapter

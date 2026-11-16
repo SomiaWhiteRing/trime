@@ -50,14 +50,17 @@ import splitties.views.dsl.core.textView
 import splitties.views.dsl.core.wrapContent
 import splitties.views.imageDrawable
 import splitties.views.setPaddingDp
+import kotlin.math.roundToInt
 
 class ClipboardBeanUi(
     override val ctx: Context,
     private val scope: ThemeScope,
     private val cherry: Boolean,
     private val expandable: Boolean,
+    private val phrase: Boolean,
 ) : Ui {
     private val theme: Theme get() = scope.theme
+    private var phraseFavorite = false
 
     val textView =
         textView {
@@ -65,6 +68,7 @@ class ClipboardBeanUi(
             maxLines = if (expandable) 1 else 4
             textSize = if (expandable || !cherry) 14f else 12f
             typeface = theme.fonts.key
+            if (phrase) translationY = dp(2f)
             if (cherry) setPaddingDp(8, 8, if (expandable) 37 else 8, 8) else setPaddingDp(8, 4, 8, 4)
             ellipsize = TextUtils.TruncateAt.END
             setTextColor(scope.colors.keyTextColor)
@@ -72,8 +76,11 @@ class ClipboardBeanUi(
 
     val pin =
         imageView {
+            if (phrase) translationY = dp(2f)
             imageDrawable =
-                drawable(R.drawable.ic_baseline_push_pin_24)!!.apply {
+                if (phrase) scope.drawable("clipboard-phrase-star.png") ?: drawable(R.drawable.ic_baseline_star_24)!!.apply {
+                    setTint(0xFFFFC033.toInt())
+                } else drawable(R.drawable.ic_baseline_push_pin_24)!!.apply {
                     setTint(scope.colors.keySymbolColor)
                     setAlpha(0.3f)
                 }
@@ -81,13 +88,13 @@ class ClipboardBeanUi(
 
     private val expand = ImageView(ctx).apply {
         scaleType = ImageView.ScaleType.FIT_START
-        setPadding(dp(12), dp(12), dp(12), 0)
+        setPadding(dp(12), if (phrase) dp(44f / 3f).roundToInt() else dp(12), dp(12), 0)
         contentDescription = ctx.getString(R.string.cherry_clipboard_expand)
     }
 
     private val actions = LinearLayout(ctx).apply {
         gravity = Gravity.CENTER_VERTICAL
-        setPaddingRelative(ctx.dp(8), 0, ctx.dp(8), 0)
+        setPaddingRelative(if (phrase) 0 else ctx.dp(8), 0, ctx.dp(8), 0)
     }
     private val actionScroller = HorizontalScrollView(ctx).apply {
         isHorizontalScrollBarEnabled = false
@@ -112,9 +119,15 @@ class ClipboardBeanUi(
             )
             add(
                 pin,
-                lParams(dp(12), dp(12)) {
-                    bottomOfParent(dp(2))
-                    endOfParent(dp(if (expandable) 31 else 2))
+                lParams(dp(if (phrase) 8 else 12), dp(if (phrase) 8 else 12)) {
+                    if (phrase) {
+                        startOfParent(dp(23f / 3f).roundToInt())
+                        centerVertically()
+                        topMargin = dp(2)
+                    } else {
+                        bottomOfParent(dp(2))
+                        endOfParent(dp(if (expandable) 31 else 2))
+                    }
                 },
             )
             if (expandable) {
@@ -138,9 +151,9 @@ class ClipboardBeanUi(
                 add(LinearLayout(ctx).apply {
                     orientation = LinearLayout.VERTICAL
                     addView(layout, LinearLayout.LayoutParams(matchParent, wrapContent))
-                    addView(actionScroller, LinearLayout.LayoutParams(matchParent, dp(44)).apply {
-                        topMargin = dp(7)
-                        bottomMargin = dp(12)
+                    addView(actionScroller, LinearLayout.LayoutParams(matchParent, dp(if (phrase) 54 else 44)).apply {
+                        topMargin = dp(if (phrase) 4 else 7)
+                        bottomMargin = dp(if (phrase) 9 else 12)
                     })
                 }, lParams(matchParent, wrapContent))
             } else {
@@ -154,6 +167,7 @@ class ClipboardBeanUi(
         pinned: Boolean,
     ) {
         textView.text = text
+        phraseFavorite = phrase && pinned
         pin.visibility = if (pinned) View.VISIBLE else View.GONE
     }
 
@@ -172,17 +186,35 @@ class ClipboardBeanUi(
         expand.updateLayoutParams<ConstraintLayout.LayoutParams> {
             marginEnd = ctx.dp(if (compact) 8 else 0)
         }
-        textView.setPaddingDp(if (compact) 20 else 12, 8, if (compact) 45 else 37, 8)
+        textView.setPaddingDp((if (compact) 20 else 12) + if (phraseFavorite) 12 else 0, 8, if (compact) 45 else 37, 8)
         actions.removeAllViews()
-        for ((label, icon, action) in entries) {
+        for ((index, entry) in entries.withIndex()) {
+            val (label, icon, action) = entry
+            if (phrase && !compact) {
+                val state = if (phraseFavorite) "favorite" else "plain"
+                val artwork = scope.drawable("clipboard-phrase-card-$state-$index.png")
+                if (artwork != null) {
+                    actions.addView(View(ctx).apply {
+                        contentDescription = ctx.getText(label)
+                        background = artwork
+                        setOnClickListener { action() }
+                    }, LinearLayout.LayoutParams(ctx.dp(if (phraseFavorite && index == 0) 90 else 64), LinearLayout.LayoutParams.MATCH_PARENT))
+                    continue
+                }
+            }
             actions.addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                scope.drawable("clipboard-action-$icon.png")?.let { artwork ->
+                val asset = if (icon.startsWith("phrase-")) "collect" else icon
+                scope.drawable("clipboard-action-$asset.png")?.let { artwork ->
                     addView(ImageView(ctx).apply {
                         scaleType = ImageView.ScaleType.FIT_CENTER
                         setImageDrawable(artwork)
-                        setColorFilter(0xFFB3B3B3.toInt())
+                        setColorFilter(when (icon) {
+                            "phrase-favorite" -> 0xFFA21E42.toInt()
+                            "phrase-unfavorite" -> 0xFFFFC033.toInt()
+                            else -> 0xFFB3B3B3.toInt()
+                        })
                     }, LinearLayout.LayoutParams(ctx.dp(18), ctx.dp(18)).apply {
                         bottomMargin = ctx.dp(4)
                     })
@@ -287,13 +319,13 @@ class ClipboardBeanUi(
     /** Restyles the row after a scheme switch. */
     fun refreshColors(compact: Boolean = false) {
         textView.setTextColor(if (cherry) 0xFFB3B3B3.toInt() else scope.colors.keyTextColor)
-        pin.drawable?.setTint(scope.colors.keySymbolColor)
+        if (!phrase) pin.drawable?.setTint(scope.colors.keySymbolColor)
         root.background = if (compact) {
             null
         } else if (cherry) {
             GradientDrawable().apply {
                 setColor(0xFF434343.toInt())
-                setStroke(ctx.dp(1f / 3f).toInt().coerceAtLeast(1), 0xFF6E6E6E.toInt())
+                setStroke(ctx.dp(1f / 3f).toInt().coerceAtLeast(1), if (phrase) 0xFF747474.toInt() else 0xFF6E6E6E.toInt())
                 cornerRadius = ctx.dp(4f)
             }
         } else {

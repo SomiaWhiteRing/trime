@@ -89,7 +89,7 @@ abstract class ClipboardAdapter(
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int,
-    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope, cherry, cherry))
+    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope, cherry, cherry, cherry && !enableCollection))
 
     override fun onBindViewHolder(
         holder: ViewHolder,
@@ -121,7 +121,8 @@ abstract class ClipboardAdapter(
                     Triple(R.string.delete, "delete") { onDelete(bean.id) },
                     Triple(R.string.cherry_clipboard_multi_select, "multi-select") { onMultiSelect(bean.id) },
                 ) else listOf(
-                    Triple(R.string.collect, "collect") {
+                    Triple(if (bean.pinned) R.string.cherry_phrase_unfavorite else R.string.collect,
+                        if (bean.pinned) "phrase-unfavorite" else "phrase-favorite") {
                         if (bean.pinned) onUnpin(bean.id) else onPin(bean.id)
                     },
                     Triple(R.string.edit, "edit") { onEdit(bean.id) },
