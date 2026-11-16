@@ -40,10 +40,26 @@ class CandidateUi(
             ToolButton(ctx, R.drawable.ic_baseline_expand_more_24, scope)
         }).apply { visibility = View.INVISIBLE }
 
+    val dismissButton = if (usesCherryLayout && scope.drawable("candidate-dismiss.png") != null) {
+        ToolButton(ctx, ToolBar.Button(foreground = ToolBar.Button.Foreground(style = "candidate-dismiss.png", padding = 0)), scope)
+    } else {
+        ToolButton(ctx, android.R.drawable.ic_menu_close_clear_cancel, scope)
+    }.apply {
+        visibility = View.INVISIBLE
+        contentDescription = ctx.getString(android.R.string.cancel)
+    }
+
     override val root =
         ctx.constraintLayout {
             add(
                 unrollButton,
+                lParams(dp(if (cherryArrow) 60 else 40)) {
+                    centerVertically()
+                    endOfParent()
+                },
+            )
+            add(
+                dismissButton,
                 lParams(dp(if (cherryArrow) 60 else 40)) {
                     centerVertically()
                     endOfParent()
@@ -67,6 +83,7 @@ class CandidateUi(
     /** Restyles the candidate bar after a scheme switch. */
     fun refreshColors() {
         unrollButton.refreshColors()
+        dismissButton.refreshColors()
         if (unrolled) {
             unrollButton.setIcon(R.drawable.ic_baseline_expand_less_24)
         } else if (!cherryArrow) {

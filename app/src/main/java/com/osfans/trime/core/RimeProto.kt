@@ -109,6 +109,9 @@ sealed interface Candidates {
         override val highlighted: Int = 0,
         override val candidates: Array<CandidateProto> = arrayOf(),
     ) : Candidates {
+        var commitOnDismiss: Boolean = false
+            internal set
+
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false

@@ -5,6 +5,7 @@
 
 package com.osfans.trime.core
 
+import android.view.KeyEvent
 import com.osfans.trime.BuildConfig
 import com.osfans.trime.core.data.DataManager
 import com.osfans.trime.core.data.UserDataManager
@@ -340,7 +341,8 @@ class Rime :
     private fun processKeyInner(value: Int, modifiers: Int, isVirtual: Boolean): Boolean {
         lastAsciiTipsText = asciiTipsText(getRimeStatus())
         val handled = processRimeKey(value, modifiers)
-        emitResponse()
+        val afterDelete = handled && KeyValue(value).keyCode == KeyEvent.KEYCODE_DEL
+        emitResponse(afterDelete = afterDelete)
         if (!handled) {
             handleRimeMessage(
                 10, // RimeMessage.MessageType.Key,
@@ -359,7 +361,7 @@ class Rime :
         else -> ""
     }
 
-    private fun emitResponse(commit: CommitProto? = null) {
+    private fun emitResponse(commit: CommitProto? = null, afterDelete: Boolean = false) {
         val response = getRimeResponse(pagingMode)
         handleRimeMessage(4, arrayOf(commit ?: response.commit))
         handlePreedit(response.composition, response.status.schemaId)
@@ -376,7 +378,11 @@ class Rime :
         val fallback = raw?.let { arrayOf(CandidateProto(it, "", "")) }
         when (candidates) {
             is Candidates.Paged -> handleRimeMessage(7, arrayOf(if (fallback == null) candidates else Candidates.Paged(candidates = fallback)))
-            is Candidates.Bulk -> handleRimeMessage(9, arrayOf(if (fallback == null) candidates else Candidates.Bulk(total = 1, candidates = fallback)))
+            is Candidates.Bulk -> {
+                val bulk = if (fallback == null) candidates else Candidates.Bulk(total = 1, candidates = fallback)
+                val dismiss = afterDelete && response.status.schemaId == "cherry_english" && getRimeRawInput().length == 1
+                handleRimeMessage(9, arrayOf(if (dismiss) bulk.copy(highlighted = -1).apply { commitOnDismiss = true } else bulk))
+            }
         }
         handleRimeMessage(8, arrayOf(response.status))
     }

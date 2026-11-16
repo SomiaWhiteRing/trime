@@ -57,11 +57,20 @@ parser.add_argument("--clipboard-phrase-empty", type=Path,
                     help="1116 x 2480 CHERRY empty custom group screenshot")
 parser.add_argument("--clipboard-group-sort", type=Path,
                     help="1116 x 2480 CHERRY group sorting screenshot with no groups selected")
+parser.add_argument("--candidate-dismiss", type=Path,
+                    help="1116 x 123 CHERRY English candidate bar after deleting back to one letter")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.candidate_dismiss:
+    candidate = Image.open(args.candidate_dismiss).convert("RGB")
+    if candidate.size != (1116, 123):
+        raise ValueError("Expected a 1116 x 123 CHERRY candidate bar")
+    candidate.crop((936, 0, 1116, 123)).save(assets / "candidate-dismiss.png")
+
 
 if args.clipboard_group_sort:
     reference = Image.open(args.clipboard_group_sort).convert("RGB")

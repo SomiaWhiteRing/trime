@@ -172,10 +172,16 @@ class InputBarDelegate(override val di: DI) :
         evalAlwaysUiState()
     }
 
+    private var candidateDismissCommits = false
+    private var unrollEnabled = false
+
     private val candidateUi by lazy {
         CandidateUi(context, scope, candidate.view).apply {
             unrollButton.apply {
                 onSwipe = swipeDownHideKeyboardCallback
+            }
+            dismissButton.setOnClickListener {
+                service.postRimeJob { commitComposition() }
             }
         }
     }
@@ -223,7 +229,9 @@ class InputBarDelegate(override val di: DI) :
     }
 
     private fun setUnrollButtonEnabled(enabled: Boolean) {
-        candidateUi.unrollButton.visibility = if (enabled) View.VISIBLE else View.INVISIBLE
+        unrollEnabled = enabled
+        candidateUi.unrollButton.visibility = if (enabled && !candidateDismissCommits) View.VISIBLE else View.INVISIBLE
+        candidateUi.dismissButton.visibility = if (candidateDismissCommits) View.VISIBLE else View.INVISIBLE
     }
 
     internal fun showCherryCandidateBoard(expanded: Boolean) {
@@ -231,6 +239,11 @@ class InputBarDelegate(override val di: DI) :
     }
 
     override fun onCandidateListUpdate(data: Candidates.Bulk) {
+        val dismiss = data.commitOnDismiss && "cherry_edit" in theme.presetKeyboards
+        if (candidateDismissCommits != dismiss) {
+            candidateDismissCommits = dismiss
+            setUnrollButtonEnabled(unrollEnabled)
+        }
         barStateMachine.push(
             QuickBarStateMachine.TransitionEvent.CandidatesUpdated,
             QuickBarStateMachine.BooleanKey.CandidateEmpty to data.candidates.isEmpty(),
