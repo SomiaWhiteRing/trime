@@ -27,6 +27,7 @@ import android.widget.FrameLayout
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RadioButton
 import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
@@ -225,11 +226,15 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    private val clipboardPage by lazy {
+    private val clipboardPage: ClipboardPageUi by lazy {
         ClipboardPageUi(context, usesCherryLayout).apply {
             recyclerView.apply {
                 layoutManager = verticalLayoutManager()
                 adapter = clipboardBeansAdapter
+            }
+            if (usesCherryLayout && prefs.cherryClipboardCompactLayout.getValue()) {
+                setCompact(true)
+                clipboardBeansAdapter.compact = true
             }
             if (usesCherryLayout) {
                 root.setBackgroundColor(0xFF353535.toInt())
@@ -441,6 +446,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, context.dp(7), 0, context.dp(7))
+            addView(createClipboardLayoutSelector(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(context.dp(9), 0, context.dp(9), context.dp(7))
+            })
             val rows = listOf(
                 "启用剪贴板" to prefs.clipboardListening,
                 "候选条展示复制内容" to prefs.clipboardSuggestion,
@@ -450,6 +458,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 SwitchCompat(context).apply {
                     text = label
                     textSize = 14f
+                    gravity = Gravity.CENTER_VERTICAL
                     setTextColor(0xFFB3B3B3.toInt())
                     isClickable = true
                     isChecked = preference.getValue()
@@ -481,6 +490,77 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 setOnClickListener { deleteCurrentPage(0) }
             }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(56)))
         })
+    }
+
+    private fun createClipboardLayoutSelector() = LinearLayout(context).apply {
+        setPadding(context.dp(14), context.dp(14), context.dp(14), context.dp(12))
+        background = GradientDrawable().apply {
+            setColor(0xFF434343.toInt())
+            cornerRadius = context.dp(3.5f)
+        }
+        val accent = 0xFF9D1E42.toInt()
+        val previewWidth = minOf(context.dp(145), (clipboardLayout.width - context.dp(46)) / 2)
+        val controls = listOf(
+            false to R.string.cherry_clipboard_regular_layout,
+            true to R.string.cherry_clipboard_compact_layout,
+        ).map { (compact, title) ->
+            if (compact) addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+            val option = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+            val outline = GradientDrawable().apply {
+                cornerRadius = context.dp(9f)
+                setColor(Color.TRANSPARENT)
+            }
+            val preview = ImageView(context).apply {
+                scaleType = ImageView.ScaleType.FIT_XY
+                val mode = if (compact) "compact" else "regular"
+                setImageDrawable(scope.drawable("clipboard-layout-$mode.png"))
+                foreground = outline
+            }
+            val button = RadioButton(context).apply {
+                setText(title)
+                textSize = 14f
+                setTextColor(0xFFB3B3B3.toInt())
+                buttonDrawable = null
+                compoundDrawablePadding = context.dp(6)
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            option.addView(preview, LinearLayout.LayoutParams(previewWidth, context.dp(93)))
+            option.addView(button, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, context.dp(25)).apply {
+                topMargin = context.dp(2)
+            })
+            addView(option, LinearLayout.LayoutParams(previewWidth, LinearLayout.LayoutParams.WRAP_CONTENT))
+            Triple(preview, button, outline)
+        }
+        val render = { compact: Boolean ->
+            controls.forEachIndexed { index, (_, button, outline) ->
+                val selected = compact == (index == 1)
+                button.isChecked = selected
+                val indicator = context.getDrawable(
+                    if (selected) R.drawable.cherry_clipboard_checkbox_checked else R.drawable.cherry_clipboard_checkbox_unchecked,
+                )?.apply { setBounds(0, 0, context.dp(16), context.dp(16)) }
+                button.setCompoundDrawablesRelative(indicator, null, null, null)
+                outline.setStroke(if (selected) context.dp(1f / 2).toInt().coerceAtLeast(1) else 0, accent)
+            }
+        }
+        render(prefs.cherryClipboardCompactLayout.getValue())
+        controls.forEachIndexed { index, (preview, button, _) ->
+            val choose = View.OnClickListener {
+                val compact = index == 1
+                if (prefs.cherryClipboardCompactLayout.getValue() != compact) {
+                    prefs.cherryClipboardCompactLayout.setValue(compact)
+                    clipboardPage.setCompact(compact)
+                    clipboardBeansAdapter.compact = compact
+                    collectionPage.setCompact(compact)
+                    collectionBeansAdapter.compact = compact
+                }
+                render(compact)
+            }
+            preview.setOnClickListener(choose)
+            button.setOnClickListener(choose)
+        }
     }
 
     private fun applyCherrySwitchArtwork(toggle: SwitchCompat) {
@@ -517,12 +597,16 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    private val collectionPage by lazy {
+    private val collectionPage: ClipboardPageUi by lazy {
         ClipboardPageUi(context, usesCherryLayout).apply {
             if (usesCherryLayout) root.setBackgroundColor(0xFF353535.toInt())
             recyclerView.apply {
                 layoutManager = verticalLayoutManager()
                 adapter = collectionBeansAdapter
+            }
+            if (usesCherryLayout && prefs.cherryClipboardCompactLayout.getValue()) {
+                setCompact(true)
+                collectionBeansAdapter.compact = true
             }
         }
     }

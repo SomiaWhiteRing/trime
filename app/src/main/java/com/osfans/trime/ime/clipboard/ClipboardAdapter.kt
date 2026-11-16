@@ -62,6 +62,12 @@ abstract class ClipboardAdapter(
     }
 
     private var popupMenu: PopupMenu? = null
+    var compact = false
+        set(value) {
+            if (field == value) return
+            field = value
+            notifyDataSetChanged()
+        }
     var selection: Set<Int>? = null
         set(value) {
             field = value
@@ -83,7 +89,7 @@ abstract class ClipboardAdapter(
     ) {
         val bean = getItem(position) ?: return
         with(holder.ui) {
-            refreshColors()
+            refreshColors(compact)
             val content = bean.text.orEmpty()
             val preview = excerptText(content)
             setBean(preview, bean.pinned)

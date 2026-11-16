@@ -194,14 +194,16 @@ class ClipboardBeanUi(
     }
 
     /** Restyles the row after a scheme switch. */
-    fun refreshColors() {
+    fun refreshColors(compact: Boolean = false) {
         textView.setTextColor(if (cherry) 0xFFB3B3B3.toInt() else scope.colors.keyTextColor)
         pin.drawable?.setTint(scope.colors.keySymbolColor)
         root.background = if (cherry) {
             GradientDrawable().apply {
                 setColor(0xFF434343.toInt())
-                setStroke(ctx.dp(1f / 3f).toInt().coerceAtLeast(1), 0xFF6E6E6E.toInt())
-                cornerRadius = ctx.dp(4f)
+                if (!compact) {
+                    setStroke(ctx.dp(1f / 3f).toInt().coerceAtLeast(1), 0xFF6E6E6E.toInt())
+                    cornerRadius = ctx.dp(4f)
+                }
             }
         } else {
             scope.decorDrawable(
