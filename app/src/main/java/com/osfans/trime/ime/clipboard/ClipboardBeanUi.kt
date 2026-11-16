@@ -139,10 +139,10 @@ class ClipboardBeanUi(
         pin.visibility = if (pinned) View.VISIBLE else View.GONE
     }
 
-    fun bindExpansion(preview: String, content: String, previewLines: Int, entries: List<Triple<Int, String, () -> Unit>>) {
+    fun bindExpansion(preview: String, content: String, compact: Boolean, entries: List<Triple<Int, String, () -> Unit>>) {
         checkbox.visibility = View.GONE
         expand.visibility = View.VISIBLE
-        textView.setPaddingDp(8, 8, 37, 8)
+        textView.setPaddingDp(if (compact) 20 else 12, 8, if (compact) 45 else 37, 8)
         actions.removeAllViews()
         for ((label, icon, action) in entries) {
             actions.addView(LinearLayout(ctx).apply {
@@ -171,7 +171,11 @@ class ClipboardBeanUi(
         }
         val setExpanded = { expanded: Boolean ->
             actionScroller.visibility = if (expanded) View.VISIBLE else View.GONE
-            textView.maxLines = if (expanded) 6 else previewLines
+            textView.maxLines = when {
+                expanded -> 6
+                compact -> 1
+                else -> 2
+            }
             textView.text = if (expanded) content else preview
             expand.rotation = if (expanded) 180f else 0f
         }
