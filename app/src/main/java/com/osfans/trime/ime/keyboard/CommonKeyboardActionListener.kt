@@ -246,13 +246,10 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                     val current = selectedSchemaId()
                     val chinese = cherryPreferences.getString("chinese_schema", null)
                         ?.takeIf { it.isNotBlank() } ?: "luna_pinyin"
-                    val rawInput = if (prediction == null && !returnToChinese) getRawInput() else ""
-                    if (rawInput.isEmpty()) {
-                        commitComposition()
-                    } else {
-                        withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
-                        clearComposition()
-                    }
+                    val transferToEnglish = prediction == null && !returnToChinese &&
+                        cherryPreferences.getBoolean("prediction", false)
+                    val rawInput = if (transferToEnglish) getRawInput() else ""
+                    if (!transferToEnglish) commitComposition()
                     when (prediction) {
                         true -> {
                             if (selectSchema("cherry_english")) {
@@ -284,8 +281,12 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                                 if (current.isNotBlank() && current != "cherry_english") {
                                     cherryPreferences.edit().putString("chinese_schema", current).apply()
                                 }
-                                val usePrediction = cherryPreferences.getBoolean("prediction", false)
-                                if (!usePrediction || !selectSchema("cherry_english")) {
+                                if (transferToEnglish && selectSchema("cherry_english")) {
+                                    if (rawInput.isNotEmpty() && !setRawInput(rawInput, rawInput.encodeToByteArray().size)) {
+                                        withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
+                                    }
+                                } else {
+                                    if (transferToEnglish) commitComposition()
                                     if (getRuntimeOption("ascii_mode")) {
                                         service.lifecycleScope.launch { keyboardWindow.switchKeyboard("cherry_ascii") }
                                     } else {

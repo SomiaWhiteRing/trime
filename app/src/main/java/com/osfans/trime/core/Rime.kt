@@ -338,7 +338,7 @@ class Rime :
     private fun emitResponse(commit: CommitProto? = null) {
         val response = getRimeResponse(pagingMode)
         handleRimeMessage(4, arrayOf(commit ?: response.commit))
-        handlePreedit(response.composition)
+        handlePreedit(response.composition, response.status.schemaId)
         if (response.composition.length <= 0 && lastAsciiTipsText != asciiTipsText(response.status)) {
             showAsciiSwitchTips(response.status)
         }
@@ -349,16 +349,17 @@ class Rime :
         handleRimeMessage(8, arrayOf(response.status))
     }
 
-    private fun handlePreedit(composition: CompositionProto) {
-        val mode = if (isNullInputType) {
-            InlinePreeditMode.DISABLE
-        } else {
-            inlinePreeditMode
+    private fun handlePreedit(composition: CompositionProto, schemaId: String) {
+        val mode = when {
+            isNullInputType -> InlinePreeditMode.DISABLE
+            schemaId == "cherry_english" -> InlinePreeditMode.COMPOSING_TEXT
+            else -> inlinePreeditMode
         }
-        val inlinePreedit = when (mode) {
-            InlinePreeditMode.DISABLE -> ""
-            InlinePreeditMode.COMPOSING_TEXT -> composition.preedit ?: ""
-            InlinePreeditMode.COMMIT_TEXT_PREVIEW -> composition.commitTextPreview ?: ""
+        val inlinePreedit = when {
+            mode == InlinePreeditMode.DISABLE -> ""
+            schemaId == "cherry_english" -> getRimeRawInput()
+            mode == InlinePreeditMode.COMPOSING_TEXT -> composition.preedit ?: ""
+            else -> composition.commitTextPreview ?: ""
         }
         val composition = if (mode == InlinePreeditMode.COMPOSING_TEXT) {
             CompositionProto()
