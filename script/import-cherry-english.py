@@ -1,5 +1,6 @@
 import argparse
 import copy
+import json
 import re
 import struct
 import zipfile
@@ -25,7 +26,7 @@ def read_english_dictionary(apk):
     return trie, offsets, binary[record_start:record_start + record_size]
 
 
-def write_profile(apk, directory):
+def write_profile(apk, directory, ranked_candidates=None):
     trie, offsets, records = read_english_dictionary(apk)
     directory.mkdir(parents=True, exist_ok=True)
     entries = {}
@@ -43,7 +44,8 @@ def write_profile(apk, directory):
         cursor = start
         while cursor < end:
             # Lower costs rank first. Use record order to break ties.
-            weight = (256 - records[cursor + 3]) * cost_scale + (end - cursor)
+            cost = struct.unpack_from("<H", records, cursor + 2)[0]
+            weight = (0x10000 - cost) * cost_scale + (end - cursor)
             best_weight = max(best_weight, weight)
             flags = records[cursor]
             cursor += 4
@@ -97,7 +99,7 @@ def write_profile(apk, directory):
         if len(key) < 4:
             continue
         # Reserve the earlier slots for stronger literal completions.
-        corrected_weight = weight - 18 * cost_scale - 1
+        corrected_weight = weight - (18 << 8) * cost_scale - 1
         if corrected_weight < lowest_lexical_weight:
             continue
         for index, letter in enumerate(key):
@@ -112,8 +114,19 @@ def write_profile(apk, directory):
     for key, weight in key_weights.items():
         # Leave the literal input at the head of its candidate list.
         entries[(key, key)] = weight + 1
+    for key, candidates in (ranked_candidates or {}).items():
+        if not re.fullmatch(r"[a-z]+", key) or not isinstance(candidates, list) or not candidates:
+            raise ValueError(f"Invalid observed English candidates for {key!r}")
+        if any(not isinstance(word, str) or not word_pattern.fullmatch(word) for word in candidates):
+            raise ValueError(f"Invalid observed English word for {key!r}")
+        ordered = list(dict.fromkeys(word for word in candidates if word != key))
+        base_weight = key_weights.get(key, 0)
+        # Keep raw input first, then the measured candidates, then the unmeasured suffix.
+        for position, word in enumerate(reversed(ordered), 1):
+            entries[(word, key)] = base_weight + position
+        entries[(key, key)] = base_weight + len(ordered) + 1
     with (directory / "cherry_english.dict.yaml").open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write("---\nname: cherry_english\nversion: '5'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
+        stream.write("---\nname: cherry_english\nversion: '6'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
         for (candidate, key), weight in entries.items():
             stream.write(f"{candidate}\t{key}\t{weight}\n")
 
@@ -236,8 +249,12 @@ if __name__ == "__main__":
     parser.add_argument("profile", type=Path)
     parser.add_argument("--candidate-reference", type=Path, help="CHERRY portrait capture with a visible candidate strip")
     parser.add_argument("--expanded-reference", type=Path, help="1116 x 825 crop of the expanded CHERRY keyboard on its first page")
+    parser.add_argument("--rank-reference", type=Path, help="JSON object with observed English candidates in display order by raw input")
     args = parser.parse_args()
-    entries, offsets, records, words = write_profile(args.apk, args.profile)
+    ranks = json.loads(args.rank_reference.read_text(encoding="utf-8")) if args.rank_reference else None
+    if ranks is not None and not isinstance(ranks, dict):
+        parser.error("--rank-reference must contain a JSON object")
+    entries, offsets, records, words = write_profile(args.apk, args.profile, ranks)
     if args.candidate_reference:
         import_candidate_arrow(args.candidate_reference, args.profile)
     if args.expanded_reference:
