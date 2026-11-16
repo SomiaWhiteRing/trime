@@ -386,8 +386,12 @@ class InputBarDelegate(override val di: DI) :
         alwaysUi.updateButtonsStyle("cherry_translation", visible)
     }
 
+    internal fun setCherryEditing(active: Boolean) {
+        alwaysUi.updateButtonsStyle("cherry_editing", active)
+    }
+
     private fun syncToolbarOptionStates() {
-        val options = alwaysUi.toggleOptions()
+        val options = alwaysUi.toggleOptions() - "cherry_editing"
         if (options.isEmpty()) return
         rime.launchOnReady { api ->
             val states = options.associateWith { api.getRuntimeOption(it) }

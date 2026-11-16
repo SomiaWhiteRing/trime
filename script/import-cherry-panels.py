@@ -45,6 +45,8 @@ parser.add_argument("--cherry-alphabet-top", type=Path,
                     help="1116 x 136 idle CHERRY toolbar and first thirteen panel rows from y=1631")
 parser.add_argument("--cherry-active-toolbar", nargs=2, metavar=("TRADITIONAL", "TRANSLATION"), type=Path,
                     help="1116 x 123 CHERRY toolbar crops with Traditional and Translation enabled")
+parser.add_argument("--cherry-edit-toolbar", type=Path,
+                    help="1116 x 123 CHERRY toolbar crop with the editing panel open")
 parser.add_argument("--clipboard-phrase-filters", nargs=3, metavar=("FAVORITES", "RECENT", "DEFAULT"), type=Path,
                     help="1116 x 102 common-phrase filter strips from y=1754 in each selected state")
 parser.add_argument("--clipboard-phrase-cards", nargs=3, metavar=("PLAIN", "FAVORITE", "DELETE"), type=Path,
@@ -701,9 +703,17 @@ else:
 keys["CherryTranslate"] = {
     "label": "翻译", "send": "FUNCTION", "command": "cherry_translation", "toggle": "cherry_translation",
 }
+if args.cherry_edit_toolbar:
+    toolbar = Image.open(args.cherry_edit_toolbar).convert("RGB")
+    if toolbar.size != (1116, 123):
+        raise ValueError("Expected a 1116 x 123 CHERRY editing toolbar crop")
+    toolbar.crop((750, 0, 939, 123)).save(assets / "tool-edit-on.png")
+    keys["CherryEdit"]["toggle"] = "cherry_editing"
 for button in theme["tool_bar"]["buttons"]:
     if button["action"] == "CherryTranslate":
         button["foreground"]["option_styles"] = ["tool-translate.png", "tool-translate-on.png"]
+    elif button["action"] == "CherryEdit" and args.cherry_edit_toolbar:
+        button["foreground"]["option_styles"] = ["tool-edit.png", "tool-edit-on.png"]
 
 if "cherry_english" in theme["preset_keyboards"]:
     english_importer = runpy.run_path(str(Path(__file__).with_name("import-cherry-english.py")))

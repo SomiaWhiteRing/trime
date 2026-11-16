@@ -352,10 +352,12 @@ class InputView(
 
     private fun updateCherryBottomPadding() {
         if (!ThemeManager.isCherryThemeActive) return
+        val editing = windowManager.isAttached(keyboardWindow) && keyboardWindow.isCherryEditingKeyboard
+        inputBar.setCherryEditing(editing)
         val keyboardBottom = 0xff0d0d0d.toInt()
         bottomPaddingSpace.background = when {
             windowManager.hasCherryClipboard -> ColorDrawable(0xff424242.toInt())
-            windowManager.isAttached(keyboardWindow) && keyboardWindow.isCherryEditingKeyboard ->
+            editing ->
                 LayerDrawable(arrayOf(ColorDrawable(keyboardBottom), ColorDrawable(0xff343434.toInt()))).apply {
                     setLayerHeight(1, context.dp(2))
                     setLayerGravity(1, Gravity.TOP)
