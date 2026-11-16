@@ -62,7 +62,10 @@ def sprite(sheet,index):
     return im.crop((x,y,x+w,y+h))
 
 config=resource('port/res/default.css')
-for filename, style in [('cherry-number-enter',242)]:
+for filename, style in (
+    ("cherry-number-enter", 242),
+    ("cherry-shift-off", 105), ("cherry-shift-on", 131), ("cherry-shift-marker", 250),
+):
     sheet,index=config[f'STYLE{style}']['nm_img'].split(',')
     sprite(sheet,int(index)).save(assets/(filename+'.png'))
 

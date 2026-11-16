@@ -12,10 +12,12 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.KeyEvent
 import com.mikepenz.iconics.IconicsDrawable
 import com.mikepenz.iconics.utils.sizeDp
+import com.osfans.trime.data.theme.ColorManager
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.ime.core.TrimeInputMethodService
 import com.osfans.trime.ime.popup.PopupAction
@@ -23,6 +25,7 @@ import com.osfans.trime.ime.popup.PopupDelegate
 import com.osfans.trime.util.sp
 import splitties.dimensions.dp
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 @SuppressLint("ClickableViewAccessibility", "ViewConstructor")
 class KeyView(
@@ -54,6 +57,13 @@ class KeyView(
 
     private var cachedIcon: IconicsDrawable? = null
     private var cachedIconName: String? = null
+    private val cherryShiftArtwork by lazy {
+        if (key.code != KeyEvent.KEYCODE_SHIFT_LEFT || "cherry_edit" !in theme.presetKeyboards) {
+            emptyList()
+        } else {
+            listOf("off", "on", "marker").map { ColorManager.getDrawable("cherry-shift-$it.png") }
+        }
+    }
 
     private val cachedLocation = intArrayOf(0, 0)
     private val cachedBounds = Rect()
@@ -275,7 +285,7 @@ class KeyView(
             if (it == "enter_labels") keyboardView.labelEnter else it
         }
 
-        if (label.isNotEmpty()) {
+        if (!drawCherryShift(canvas) && label.isNotEmpty()) {
             drawLabel(canvas, label)
         }
 
@@ -288,6 +298,25 @@ class KeyView(
         if (hint.isNotEmpty()) {
             drawSymbol(canvas, hint, isTop = false)
         }
+    }
+
+    private fun drawCherryShift(canvas: Canvas): Boolean {
+        val active = keyboard.isShifted
+        val arrow = cherryShiftArtwork.getOrNull(if (active) 1 else 0) ?: return false
+        val scale = keyboardView.width / 1080f
+        val centerX = (width + paddingLeft - paddingRight) / 2f
+        val centerY = (height + paddingTop - paddingBottom) / 2f
+        fun draw(sprite: Drawable, x: Float, y: Float) {
+            val w = (sprite.intrinsicWidth * scale).roundToInt()
+            val h = (sprite.intrinsicHeight * scale).roundToInt()
+            val left = (x - w / 2f).roundToInt()
+            val top = (y - h / 2f).roundToInt()
+            sprite.setBounds(left, top, left + w, top + h)
+            sprite.draw(canvas)
+        }
+        draw(arrow, centerX, centerY)
+        if (active) cherryShiftArtwork[2]?.let { draw(it, centerX + 26f * scale, centerY - 26f * scale) }
+        return true
     }
 
     private fun drawBackground(canvas: Canvas, k: Key) {
