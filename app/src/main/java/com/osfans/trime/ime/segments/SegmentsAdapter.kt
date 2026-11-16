@@ -16,6 +16,7 @@ class SegmentsAdapter(
     private val scope: ThemeScope,
     private val onItemClick: () -> Unit,
     private val rawText: String = "",
+    private val cherryPopup: Boolean = false,
 ) : BaseQuickAdapter<String, SegmentsAdapter.ViewHolder>() {
 
     class ViewHolder(val ui: SegmentUi) : RecyclerView.ViewHolder(ui.root)
@@ -51,7 +52,7 @@ class SegmentsAdapter(
         context: Context,
         parent: ViewGroup,
         viewType: Int,
-    ): ViewHolder = ViewHolder(SegmentUi(context, scope))
+    ): ViewHolder = ViewHolder(SegmentUi(context, scope, cherryPopup))
 
     override fun onBindViewHolder(
         holder: ViewHolder,

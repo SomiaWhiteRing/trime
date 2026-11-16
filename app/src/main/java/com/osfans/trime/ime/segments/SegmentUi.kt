@@ -7,6 +7,7 @@ package com.osfans.trime.ime.segments
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.ViewOutlineProvider
 import com.google.android.flexbox.FlexboxLayoutManager
@@ -22,7 +23,7 @@ import splitties.views.dsl.core.wrapContent
 import splitties.views.gravityCenter
 import splitties.views.setPaddingDp
 
-class SegmentUi(override val ctx: Context, private val scope: ThemeScope) : Ui {
+class SegmentUi(override val ctx: Context, private val scope: ThemeScope, private val cherryPopup: Boolean) : Ui {
     private val theme: Theme get() = scope.theme
 
     private val spacing = ctx.dp(4)
@@ -32,7 +33,13 @@ class SegmentUi(override val ctx: Context, private val scope: ThemeScope) : Ui {
             textSize = 16f
             isSingleLine = true
             typeface = theme.fonts.key
-            setPaddingDp(8, 4, 8, 4)
+            if (cherryPopup) {
+                setPaddingDp(8, 5, 8, 5)
+                setHeight(ctx.dp(32))
+                gravity = gravityCenter
+            } else {
+                setPaddingDp(8, 4, 8, 4)
+            }
             setTextColor(textColorStates())
         }
 
@@ -42,12 +49,24 @@ class SegmentUi(override val ctx: Context, private val scope: ThemeScope) : Ui {
             intArrayOf(android.R.attr.state_selected),
         ),
         intArrayOf(
-            scope.colors.keyTextColor,
-            scope.colors.hilitedKeyTextColor,
+            if (cherryPopup) 0xFFB3B3B3.toInt() else scope.colors.keyTextColor,
+            if (cherryPopup) 0xFF353535.toInt() else scope.colors.hilitedKeyTextColor,
         ),
     )
 
     private fun rootBackground(): StateListDrawable = StateListDrawable().apply {
+        if (cherryPopup) {
+            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply {
+                cornerRadius = ctx.dp(4f)
+                setColor(0xFF9D1E42.toInt())
+            })
+            addState(intArrayOf(), GradientDrawable().apply {
+                cornerRadius = ctx.dp(4f)
+                setColor(0xFF434343.toInt())
+                setStroke(ctx.dp(0.3f).toInt().coerceAtLeast(1), 0x4DB3B3B3)
+            })
+            return@apply
+        }
         addState(
             intArrayOf(-android.R.attr.state_selected),
             scope.decorDrawable(

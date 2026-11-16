@@ -47,7 +47,7 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
     }
 
     private val adapter by lazy {
-        SegmentsAdapter(scope, { onSelectionChanged() }, source)
+        SegmentsAdapter(scope, { onSelectionChanged() }, source, cherryPopup = clipboardPopup != null)
     }
 
     private val touchListener by lazy {
@@ -189,7 +189,9 @@ class SegmentsWindow(di: DI, private val source: String) : BoardWindow.BarBoardW
             addView(toolbarButtons)
         }
         content.addView(header, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(37)))
-        content.addView(onCreateView(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        content.addView(onCreateView().apply {
+            setBackgroundColor(0xFF353535.toInt())
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         adapter.submitList(NativeTokenizer.tokenize(source))
         ui.recyclerView.addOnItemTouchListener(touchListener)
         popup.setOnDismissListener {
