@@ -40,4 +40,8 @@
     <string name="cherry_send_random">Random</string>
     <string name="cherry_send_random_label">Send randomly</string>
     <string name="cherry_send_random_detail">Insert and send a random phrase</string>
+    <string name="cherry_send_sequential">Sequential</string>
+    <string name="cherry_send_sequential_label">Send in order</string>
+    <string name="cherry_send_sequential_detail">Send each phrase in order</string>
+    <string name="cherry_send_action">Send</string>
 </resources>

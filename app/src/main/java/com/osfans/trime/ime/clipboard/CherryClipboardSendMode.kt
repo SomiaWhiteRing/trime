@@ -8,6 +8,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import com.osfans.trime.R
@@ -19,6 +20,7 @@ internal enum class CherrySendMode(val footer: Int, val title: Int, val detail: 
     MANUAL(R.string.cherry_send_manual, R.string.cherry_send_manual_label, R.string.cherry_send_manual_detail),
     AUTOMATIC(R.string.cherry_send_automatic, R.string.cherry_send_automatic_label, R.string.cherry_send_automatic_detail),
     RANDOM(R.string.cherry_send_random, R.string.cherry_send_random_label, R.string.cherry_send_random_detail),
+    SEQUENTIAL(R.string.cherry_send_sequential, R.string.cherry_send_sequential_label, R.string.cherry_send_sequential_detail),
 }
 
 internal fun createCherrySendModePanel(
@@ -64,8 +66,12 @@ internal fun createCherrySendModePanel(
         })
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(38f + 1f / 3).roundToInt()))
 
+    val choices = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, 0, 0, context.dp(8))
+    }
     CherrySendMode.entries.forEach { mode ->
-        addView(FrameLayout(context).apply {
+        choices.addView(FrameLayout(context).apply {
             isSelected = mode == selectedMode
             val name = mode.name.lowercase()
             val state = if (isSelected) "active" else "idle"
@@ -105,4 +111,8 @@ internal fun createCherrySendModePanel(
             })
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(70f + 1f / 3).roundToInt()))
     }
+    addView(ScrollView(context).apply {
+        isVerticalScrollBarEnabled = false
+        addView(choices, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 }

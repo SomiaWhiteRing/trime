@@ -35,6 +35,8 @@ parser.add_argument("--clipboard-send-mode-panel", nargs=2, metavar=("MANUAL", "
                     help="1116 x 826 local send-mode panel captures from y=1630")
 parser.add_argument("--clipboard-send-random", nargs=2, metavar=("SCROLLED_PANEL", "FOOTER"),
                     help="Native selected random row in the scrolled mode panel, and its 1116 x 87 footer")
+parser.add_argument("--clipboard-send-sequential", nargs=4, metavar=("IDLE_PANEL", "ACTIVE_PANEL", "BODY", "FOOTER"),
+                    help="Native sequential selector rows, recommendation body and footer captures")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -185,6 +187,23 @@ if args.clipboard_send_random:
     panel.crop((0, 380, 1116, 591)).save(assets / "clipboard-send-mode-random-active.png")
     footer.crop((615, 0, 783, 87)).save(assets / "clipboard-recommend-send-random.png")
 
+
+
+if args.clipboard_send_sequential:
+    idle, active, body, footer = [Image.open(path).convert("RGB") for path in args.clipboard_send_sequential]
+    if any(im.size != (1116, 826) for im in (idle, active)) or body.size != (1116, 702) or footer.size != (1116, 87):
+        raise ValueError("Unexpected CHERRY sequential panel dimensions")
+    for name, panel in (("idle", idle), ("active", active)):
+        panel.crop((0, 591, 1116, 802)).save(assets / f"clipboard-send-mode-sequential-{name}.png")
+    footer.crop((615, 0, 783, 87)).save(assets / "clipboard-recommend-send-sequential.png")
+    plane = body.crop((951, 408, 1116, 528)).convert("RGBA")
+    for y in range(plane.height):
+        left = next(x for x in range(plane.width) if min(plane.getpixel((x, y))[:3]) >= 220)
+        for x in range(left):
+            gray = plane.getpixel((x, y))[0]
+            alpha = max(0, round((gray - 67) * 255 / 188)) if x >= left - 2 else 0
+            plane.putpixel((x, y), (255, 255, 255, alpha))
+    plane.save(assets / "clipboard-recommend-send-plane.png")
 
 
 def resource(file):

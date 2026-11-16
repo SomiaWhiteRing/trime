@@ -371,13 +371,11 @@ open class TrimeInputMethodService : LifecycleInputMethodService() {
         commitText(text)
     }
 
-    internal fun sendRecommendationInCurrentEditor() {
-        val options = currentInputEditorInfo?.imeOptions ?: return
-        if (options and EditorInfo.IME_MASK_ACTION == EditorInfo.IME_ACTION_SEND &&
-            options and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0
-        ) {
-            currentInputConnection?.performEditorAction(EditorInfo.IME_ACTION_SEND)
-        }
+    internal fun sendRecommendationInCurrentEditor(): Boolean {
+        val options = currentInputEditorInfo?.imeOptions ?: return false
+        return options and EditorInfo.IME_MASK_ACTION == EditorInfo.IME_ACTION_SEND &&
+            options and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0 &&
+            currentInputConnection?.performEditorAction(EditorInfo.IME_ACTION_SEND) == true
     }
 
     private fun handleReturnKey() {

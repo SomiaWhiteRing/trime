@@ -28,6 +28,8 @@ internal class CherryClipboardRecommendationView(
     private val scope: ThemeScope,
     private val categories: List<Category>,
     initialMode: CherrySendMode,
+    private val stage: (String) -> Boolean,
+    private val send: () -> Boolean,
     private val paste: (String) -> Unit,
 ) : LinearLayout(context) {
     data class Group(val title: String, val phrases: List<String>)
@@ -51,12 +53,38 @@ internal class CherryClipboardRecommendationView(
     private var mode = initialMode
     private var selected = 0
     private var expanded = -1
+    private var sequenceIndex = 0
+    private var staged = false
+    private val sendButton = FrameLayout(context).apply {
+        contentDescription = context.getString(R.string.cherry_send_action)
+        val artwork = scope.drawable("clipboard-recommend-send-plane.png")
+        if (artwork != null) {
+            background = artwork
+        } else {
+            background = GradientDrawable().apply {
+                setColor(0xFFFFFFFF.toInt())
+                cornerRadius = dp(20f)
+            }
+            addView(TextView(context).apply {
+                text = "➤"
+                gravity = Gravity.CENTER
+                textSize = 20f
+                setTextColor(0xFF363636.toInt())
+            }, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        }
+        setOnClickListener { sendNext() }
+    }
 
     init {
         orientation = VERTICAL
         setBackgroundColor(0xFF363636.toInt())
         addView(tabsScroll, LayoutParams(LayoutParams.MATCH_PARENT, dp(36f + 2f / 3).roundToInt()))
-        addView(cardsScroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        addView(FrameLayout(context).apply {
+            addView(cardsScroll, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            addView(sendButton, FrameLayout.LayoutParams(dp(55), dp(40), Gravity.END or Gravity.BOTTOM).apply {
+                bottomMargin = dp(29)
+            })
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         renderTabs()
         renderCards()
     }
@@ -65,6 +93,8 @@ internal class CherryClipboardRecommendationView(
         if (mode == next) return
         mode = next
         expanded = -1
+        sequenceIndex = 0
+        staged = false
         renderCards()
         cardsScroll.scrollTo(0, 0)
     }
@@ -97,6 +127,8 @@ internal class CherryClipboardRecommendationView(
                     if (selected == index) return@setOnClickListener
                     selected = index
                     expanded = -1
+                    sequenceIndex = 0
+                    staged = false
                     renderTabs()
                     renderCards()
                     cardsScroll.scrollTo(0, 0)
@@ -115,18 +147,22 @@ internal class CherryClipboardRecommendationView(
     private fun renderCards() {
         cards.removeAllViews()
         val category = categories[selected]
+        sendButton.visibility = if (mode == CherrySendMode.SEQUENTIAL && sequenceIndex in category.phrases.indices) {
+            View.VISIBLE
+        } else View.GONE
         if (mode == CherrySendMode.RANDOM) {
             renderRandomGroups(category.groups)
             return
         }
         category.phrases.forEachIndexed { index, phrase ->
             val open = expanded == index
+            val current = mode == CherrySendMode.SEQUENTIAL && index == sequenceIndex
             val card = LinearLayout(context).apply {
                 orientation = VERTICAL
                 background = GradientDrawable().apply {
-                    setColor(0xFF434343.toInt())
+                    setColor(if (current) 0xFF363636.toInt() else 0xFF434343.toInt())
                     cornerRadius = dp(4f)
-                    setStroke(dp(1f / 3).roundToInt().coerceAtLeast(1), 0xFF5A5A5A.toInt())
+                    setStroke(dp(1f / 3).roundToInt().coerceAtLeast(1), if (current) accentColor else 0xFF5A5A5A.toInt())
                 }
             }
             val row = LinearLayout(context).apply {
@@ -139,7 +175,15 @@ internal class CherryClipboardRecommendationView(
                     setTextColor(foregroundColor)
                     maxLines = if (open) Int.MAX_VALUE else 1
                     if (!open) ellipsize = TextUtils.TruncateAt.END
-                    setOnClickListener { paste(phrase) }
+                    setOnClickListener {
+                        if (mode != CherrySendMode.SEQUENTIAL) {
+                            paste(phrase)
+                        } else if (stage(phrase)) {
+                            sequenceIndex = index
+                            staged = true
+                            redrawAtCurrentScroll()
+                        }
+                    }
                     minHeight = dp(39)
                     gravity = Gravity.CENTER_VERTICAL
                 }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
@@ -180,6 +224,26 @@ internal class CherryClipboardRecommendationView(
                 bottomMargin = dp(4f + 1f / 3).roundToInt()
             })
         }
+    }
+
+    private fun sendNext() {
+        val phrase = categories[selected].phrases.getOrNull(sequenceIndex) ?: return
+        if (!staged) staged = stage(phrase)
+        if (!staged || !send()) return
+        staged = false
+        sequenceIndex++
+        redrawAtCurrentScroll()
+        cardsScroll.post {
+            cards.getChildAt(sequenceIndex)?.requestRectangleOnScreen(android.graphics.Rect(
+                0, 0, cards.width, dp(43),
+            ))
+        }
+    }
+
+    private fun redrawAtCurrentScroll() {
+        val scrollY = cardsScroll.scrollY
+        renderCards()
+        cardsScroll.post { cardsScroll.scrollTo(0, scrollY) }
     }
 
     private fun renderRandomGroups(groups: List<Group>) {

@@ -390,7 +390,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             val name = recommendationSendMode.name.lowercase()
             val label = context.getString(recommendationSendMode.footer)
             val artwork = when (label) {
-                "手动", "自动", "随机" -> scope.drawable("clipboard-recommend-send-$name.png")
+                "手动", "自动", "随机", "顺序" -> scope.drawable("clipboard-recommend-send-$name.png")
                 else -> null
             }
             sendingMode.foreground = artwork
@@ -713,7 +713,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             if (recommendations.isNotEmpty()) {
                 val content = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    val recommendationsView = CherryClipboardRecommendationView(context, scope, recommendations, recommendationSendMode) { phrase ->
+                    val recommendationsView = CherryClipboardRecommendationView(
+                        context,
+                        scope,
+                        recommendations,
+                        recommendationSendMode,
+                        stage = service::commitText,
+                        send = service::sendRecommendationInCurrentEditor,
+                    ) { phrase ->
                         if (service.commitText(phrase)) {
                             if (recommendationSendMode != CherrySendMode.MANUAL && !clipboardReturnAfterPaste) {
                                 service.sendRecommendationInCurrentEditor()
