@@ -84,6 +84,18 @@ for selected, capture in args.clipboard_title_tabs:
     _, _, glyph_left, glyph_right = tab_artwork[selected]
     contour.paste((54, 54, 54), (glyph_left - left, 29, glyph_right - left, 73))
     contour.save(assets / f"clipboard-tab-{selected}-contour.png")
+    for name, size, origin, bounds in (
+        ("back", 111, (0, 8), (25, 41, 50, 84)),
+        ("menu", 123, (993, 2), (1045, 46, 1081, 77)),
+    ):
+        left, top, right, bottom = bounds
+        patch = reference.crop(bounds)
+        background = Image.new("RGB", patch.size, (67, 67, 67))
+        mask = ImageChops.difference(patch, background).convert("L").point(lambda value: 255 if value else 0)
+        control = Image.new("RGBA", (size, size))
+        control.paste(patch, (left - origin[0], top - origin[1]), mask)
+        control.save(assets / f"clipboard-title-{name}-reference.png")
+    reference.crop((991, 11, 1001, 111)).save(assets / "clipboard-title-divider-reference.png")
     for name, (tab_left, width, glyph_left, glyph_right) in tab_artwork.items():
         tile = Image.new("RGBA", (width, 105))
         tile.paste(reference.crop((glyph_left, 40, glyph_right, 84)), (glyph_left - tab_left, 30))

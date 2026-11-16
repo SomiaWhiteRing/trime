@@ -52,9 +52,10 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     }
 
     private val size = theme.style.run { candidateViewHeight + commentHeight }
-    val backButton = if (cherry) cherryButton("clipboard-title-back.png") else null
+    private val referenceDivider = if (cherry) scope.drawable("clipboard-title-divider-reference.png") else null
+    val backButton = if (cherry) cherryButton("back") else null
     val actionButton = if (cherry) {
-        cherryButton("clipboard-title-menu.png").apply {
+        cherryButton("menu").apply {
             // The menu bitmap includes a narrow divider. Draw the shadow across the title itself.
             clipBounds = Rect(dp(3), 0, dp(size), dp(size))
         }
@@ -62,16 +63,25 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
         ToolButton(ctx, R.drawable.ic_baseline_delete_sweep_24, scope)
     }
 
-    private fun cherryButton(image: String) = ToolButton(
-        ctx,
-        ToolBar.Button(foreground = ToolBar.Button.Foreground(style = image, padding = 0)),
-        scope,
-    ).apply {
-        translationY = dp(1f / 3f)
+    private fun cherryButton(key: String): ToolButton {
+        val reference = "clipboard-title-$key-reference.png"
+        val hasReference = scope.drawable(reference) != null
+        val image = if (hasReference) reference else "clipboard-title-$key.png"
+        val highlight = if (hasReference) "0x00000000" else ""
+        return ToolButton(
+            ctx,
+            ToolBar.Button(
+                background = ToolBar.Button.Background(highlight = highlight),
+                foreground = ToolBar.Button.Foreground(style = image, padding = 0),
+            ),
+            scope,
+        ).apply {
+            translationY = dp(1f / 3f)
+        }
     }
 
     private val menuDivider = View(ctx).apply {
-        background = GradientDrawable(
+        background = referenceDivider ?: GradientDrawable(
             GradientDrawable.Orientation.LEFT_RIGHT,
             intArrayOf(0x00000000, 0x11000000, 0x18000000, 0x1E000000, 0x24000000),
         ).apply {
@@ -136,7 +146,8 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
             },
         )
         if (cherry) {
-            add(menuDivider, lParams(dp(10f / 3).roundToInt(), dp(34)) {
+            val dividerHeight = if (referenceDivider != null) dp(100f / 3).roundToInt() else dp(34)
+            add(menuDivider, lParams(dp(10f / 3).roundToInt(), dividerHeight) {
                 endOfParent(dp(size) - dp(8f / 3).roundToInt())
                 topOfParent(dp(10f / 3).roundToInt())
             })
