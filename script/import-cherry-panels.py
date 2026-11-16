@@ -45,11 +45,28 @@ parser.add_argument("--cherry-alphabet-top", type=Path,
                     help="1116 x 136 idle CHERRY toolbar and first thirteen panel rows from y=1631")
 parser.add_argument("--cherry-active-toolbar", nargs=2, metavar=("TRADITIONAL", "TRANSLATION"), type=Path,
                     help="1116 x 123 CHERRY toolbar crops with Traditional and Translation enabled")
+parser.add_argument("--clipboard-phrase-filters", nargs=3, metavar=("FAVORITES", "RECENT", "DEFAULT"), type=Path,
+                    help="1116 x 102 common-phrase filter strips from y=1754 in each selected state")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.clipboard_phrase_filters:
+    for name, capture, bounds in zip(
+        ("favorites", "recent", "default"),
+        args.clipboard_phrase_filters,
+        ((24, 159), (159, 294), (294, 513)),
+    ):
+        active = Image.open(capture).convert("RGB")
+        idle = Image.open(args.clipboard_phrase_filters[1 if name == "favorites" else 0]).convert("RGB")
+        if active.size != (1116, 102) or idle.size != (1116, 102):
+            raise ValueError("Expected a 1116 x 102 CHERRY common-phrase filter strip")
+        left, right = bounds
+        for state, artwork in (("active", active), ("idle", idle)):
+            artwork.crop((left, 0, right, 102)).save(assets / f"clipboard-phrase-{name}-{state}.png")
+
 
 if args.cherry_alphabet_top:
     reference = Image.open(args.cherry_alphabet_top).convert("RGB")

@@ -40,6 +40,7 @@ object CollectionHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dis
     suspend fun haveUnpinned() = cltDao.haveUnpinned()
 
     fun allBeans() = cltDao.allBeans()
+    fun observeRecords(ids: List<Int>) = cltDao.observeCollectionRecords(ids)
 
     suspend fun pin(id: Int) = cltDao.updatePinned(id, true)
 

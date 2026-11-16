@@ -89,7 +89,7 @@ abstract class ClipboardAdapter(
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int,
-    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope, cherry, cherry && enableCollection))
+    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope, cherry, cherry))
 
     override fun onBindViewHolder(
         holder: ViewHolder,
@@ -106,9 +106,9 @@ abstract class ClipboardAdapter(
                 bindSelection(bean.id in selected) { onMultiSelect(bean.id) }
                 return
             }
-            if (cherry && enableCollection) {
+            if (cherry) {
                 val expanded = expandedClipboardId == bean.id
-                bindExpansion(preview, content, compact, expanded, expanded && expandedClipboardText, listOf(
+                val actions = if (enableCollection) listOf(
                     Triple(R.string.word_segment, "segment") { onSegment(bean) },
                     Triple(R.string.cherry_clipboard_translate, "translate") { onTranslate(bean) },
                     Triple(R.string.cherry_clipboard_search, "search") { onSearch(bean) },
@@ -120,7 +120,14 @@ abstract class ClipboardAdapter(
                     },
                     Triple(R.string.delete, "delete") { onDelete(bean.id) },
                     Triple(R.string.cherry_clipboard_multi_select, "multi-select") { onMultiSelect(bean.id) },
-                ), onViewMore = {
+                ) else listOf(
+                    Triple(R.string.collect, "collect") {
+                        if (bean.pinned) onUnpin(bean.id) else onPin(bean.id)
+                    },
+                    Triple(R.string.edit, "edit") { onEdit(bean.id) },
+                    Triple(R.string.delete, "delete") { onDelete(bean.id) },
+                )
+                bindExpansion(preview, content, compact, expanded, expanded && expandedClipboardText, actions, onViewMore = {
                     val position = holder.bindingAdapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         expandedClipboardText = true

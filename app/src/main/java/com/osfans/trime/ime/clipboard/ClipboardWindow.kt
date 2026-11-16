@@ -41,6 +41,7 @@ import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import androidx.paging.filter
 import androidx.viewpager2.widget.ViewPager2
 import com.osfans.trime.R
@@ -97,6 +98,18 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         TEXT(R.string.cherry_clipboard_text, "文本"),
         NUMBER(R.string.cherry_clipboard_number, "数字"),
         LINK(R.string.cherry_clipboard_link, "链接"),
+    }
+
+    private enum class PhraseFilter(val text: String, val width: Int) {
+        FAVORITES("收藏", 45),
+        RECENT("最近", 45),
+        DEFAULT("默认分组", 73),
+    }
+
+    private val phraseFilter = MutableStateFlow(PhraseFilter.DEFAULT)
+    private val recentPhrasePrefs by lazy { service.getSharedPreferences("cherry_phrase_recents", Context.MODE_PRIVATE) }
+    private val recentPhraseIds by lazy {
+        MutableStateFlow(recentPhrasePrefs.getString("ids", "").orEmpty().split(',').mapNotNull(String::toIntOrNull))
     }
 
     private val category = MutableStateFlow(Category.ALL)
@@ -220,10 +233,22 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         object : ClipboardAdapter(scope, usesCherryLayout) {
             override fun onPaste(bean: DatabaseBean) {
                 val text = bean.text ?: return
-                service.commitText(text)
+                if (service.commitText(text) && usesCherryLayout) {
+                    val ids = (listOf(bean.id) + recentPhraseIds.value.filterNot { it == bean.id }).take(300)
+                    recentPhraseIds.value = ids
+                    recentPhrasePrefs.edit().putString("ids", ids.joinToString(",")).apply()
+                }
                 if (clipboardReturnAfterPaste) {
                     windowManager.attachWindow(KeyboardWindow)
                 }
+            }
+
+            override fun onPin(id: Int) {
+                service.lifecycleScope.launch { CollectionHelper.pin(id) }
+            }
+
+            override fun onUnpin(id: Int) {
+                service.lifecycleScope.launch { CollectionHelper.unpin(id) }
             }
 
             override fun onEdit(id: Int) {
@@ -697,7 +722,42 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 layoutManager = verticalLayoutManager()
                 adapter = collectionBeansAdapter
             }
-            if (usesCherryLayout) collectionBeansAdapter.addOnPagesUpdatedListener(::refreshCompactBackground)
+            if (usesCherryLayout) {
+                collectionBeansAdapter.addOnPagesUpdatedListener(::refreshCompactBackground)
+                recyclerView.itemAnimator = null
+                val filters = LinearLayout(context).apply {
+                    setBackgroundColor(0xFF363636.toInt())
+                    setPadding(context.dp(8), 0, 0, 0)
+                }
+                val labels = PhraseFilter.entries.associateWith { filter ->
+                    TextView(context).apply {
+                        text = filter.text
+                        textSize = 14f
+                        gravity = Gravity.CENTER
+                        filters.addView(this, LinearLayout.LayoutParams(context.dp(filter.width), LinearLayout.LayoutParams.MATCH_PARENT))
+                    }
+                }
+                fun select(filter: PhraseFilter) {
+                    phraseFilter.value = filter
+                    labels.forEach { (item, label) ->
+                        val state = if (item == filter) "active" else "idle"
+                        label.foreground = scope.drawable("clipboard-phrase-${item.name.lowercase()}-$state.png")
+                        label.setTextColor(if (label.foreground != null) Color.TRANSPARENT else if (item == filter) 0xFF9D1E42.toInt() else 0xFFB3B3B3.toInt())
+                    }
+                    recyclerView.scrollToPosition(0)
+                }
+                labels.forEach { (filter, label) -> label.setOnClickListener { select(filter) } }
+                select(phraseFilter.value)
+                root.removeView(recyclerView)
+                root.addView(
+                    LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(filters, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(34)))
+                        addView(recyclerView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+                    },
+                    FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
+                )
+            }
             if (usesCherryLayout && prefs.cherryClipboardCompactLayout.getValue()) {
                 setCompact(true)
                 collectionBeansAdapter.compact = true
@@ -926,9 +986,26 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun startCollectionPaging() {
         collectionBeansSubmitJob = service.lifecycleScope.launch {
-            collectionBeansPager.flow.collectLatest { collectionBeansAdapter.submitData(it) }
+            val pages = if (usesCherryLayout) {
+                phraseFilter.flatMapLatest { filter ->
+                    when (filter) {
+                        PhraseFilter.DEFAULT -> collectionBeansPager.flow
+                        PhraseFilter.FAVORITES -> collectionBeansPager.flow.map { page -> page.filter { it.pinned } }
+                        PhraseFilter.RECENT -> recentPhraseIds.flatMapLatest { ids ->
+                            CollectionHelper.observeRecords(ids).map { records ->
+                                val byId = records.associateBy { it.id }
+                                PagingData.from(ids.mapNotNull(byId::get))
+                            }
+                        }
+                    }
+                }
+            } else {
+                collectionBeansPager.flow
+            }
+            pages.collectLatest { collectionBeansAdapter.submitData(it) }
         }
     }
 
