@@ -66,11 +66,13 @@ abstract class ClipboardAdapter(
 
     private var popupMenu: PopupMenu? = null
     private var expandedClipboardId: Int? = null
+    private var expandedClipboardText = false
     var compact = false
         set(value) {
             if (field == value) return
             field = value
             expandedClipboardId = null
+            expandedClipboardText = false
             notifyDataSetChanged()
         }
     var selection: Set<Int>? = null
@@ -105,7 +107,8 @@ abstract class ClipboardAdapter(
                 return
             }
             if (cherry && enableCollection) {
-                bindExpansion(preview, content, compact, expandedClipboardId == bean.id, listOf(
+                val expanded = expandedClipboardId == bean.id
+                bindExpansion(preview, content, compact, expanded, expanded && expandedClipboardText, listOf(
                     Triple(R.string.word_segment, "segment") { onSegment(bean) },
                     Triple(R.string.cherry_clipboard_translate, "translate") { onTranslate(bean) },
                     Triple(R.string.cherry_clipboard_search, "search") { onSearch(bean) },
@@ -117,11 +120,18 @@ abstract class ClipboardAdapter(
                     },
                     Triple(R.string.delete, "delete") { onDelete(bean.id) },
                     Triple(R.string.cherry_clipboard_multi_select, "multi-select") { onMultiSelect(bean.id) },
-                )) {
+                ), onViewMore = {
+                    val position = holder.bindingAdapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        expandedClipboardText = true
+                        notifyItemChanged(position)
+                    }
+                }) {
                     val position = holder.bindingAdapterPosition
                     if (position == RecyclerView.NO_POSITION) return@bindExpansion
                     val previousId = expandedClipboardId
                     expandedClipboardId = if (previousId == bean.id) null else bean.id
+                    expandedClipboardText = false
                     if (previousId != null && previousId != bean.id) {
                         val previous = snapshot().indexOfFirst { it?.id == previousId }
                         if (previous >= 0) notifyItemChanged(previous)

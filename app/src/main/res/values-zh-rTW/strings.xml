@@ -143,6 +143,7 @@
     <string name="licenses_of_third_party_libraries">第三方軟體庫許可證</string>
     <string name="clipboard">剪貼簿</string>
     <string name="cherry_clipboard_settings">設定</string>
+    <string name="cherry_clipboard_view_more">查看更多</string>
     <string name="cherry_clipboard_regular_layout">常規版面</string>
     <string name="cherry_clipboard_compact_layout">緊湊版面</string>
     <string name="collection">收藏夾</string>

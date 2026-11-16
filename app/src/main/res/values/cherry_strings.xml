@@ -25,6 +25,7 @@
     <string name="cherry_translation_send">Translate</string>
     <string name="cherry_translation_close">Close</string>
     <string name="cherry_clipboard_settings">Settings</string>
+    <string name="cherry_clipboard_view_more">View more</string>
     <string name="cherry_clipboard_regular_layout">Regular layout</string>
     <string name="cherry_clipboard_compact_layout">Compact layout</string>
     <string name="cherry_clipboard_count">%1$d/%2$d</string>

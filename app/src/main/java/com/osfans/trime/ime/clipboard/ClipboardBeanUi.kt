@@ -7,8 +7,12 @@ package com.osfans.trime.ime.clipboard
 
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
+import android.text.SpannableStringBuilder
+import android.text.StaticLayout
 import android.text.TextUtils
+import android.text.style.ClickableSpan
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.CheckBox
@@ -17,6 +21,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
@@ -152,7 +157,9 @@ class ClipboardBeanUi(
         content: String,
         compact: Boolean,
         expanded: Boolean,
+        fullText: Boolean,
         entries: List<Triple<Int, String, () -> Unit>>,
+        onViewMore: () -> Unit,
         onToggle: () -> Unit,
     ) {
         checkbox.visibility = View.GONE
@@ -189,19 +196,76 @@ class ClipboardBeanUi(
         }
         actionScroller.visibility = if (expanded) View.VISIBLE else View.GONE
         textView.maxLines = when {
+            fullText -> Int.MAX_VALUE
             expanded -> 6
             compact -> 1
             else -> 2
         }
         textView.text = if (expanded) content else preview
+        textView.setOnTouchListener(null)
+        if (expanded && !fullText) {
+            textView.doOnLayout {
+                if (textView.text == content && textView.maxLines == 6) {
+                    bindViewMore(content, onViewMore)
+                }
+            }
+        }
         expand.setImageResource(if (expanded) R.drawable.ic_cherry_clipboard_collapse else R.drawable.ic_cherry_clipboard_expand)
         expand.setOnClickListener { onToggle() }
         actionScroller.scrollTo(0, 0)
     }
 
+    private fun bindViewMore(content: String, onViewMore: () -> Unit) {
+        val width = textView.width - textView.totalPaddingLeft - textView.totalPaddingRight
+        val more = ctx.getString(R.string.cherry_clipboard_view_more)
+        val suffix = "…$more"
+        val available = width - textView.paint.measureText(suffix)
+        if (available <= 0) return
+        val layout = StaticLayout.Builder.obtain(content, 0, content.length, textView.paint, width)
+            .setMaxLines(7)
+            .setBreakStrategy(textView.breakStrategy)
+            .build()
+        if (layout.lineCount <= 6) return
+        val start = layout.getLineStart(5)
+        val end = layout.getLineEnd(5)
+        val lastLine = TextUtils.ellipsize(
+            content.substring(start, end).trimEnd(),
+            textView.paint,
+            available,
+            TextUtils.TruncateAt.END,
+        ).toString().removeSuffix("…")
+        val span = object : ClickableSpan() {
+            override fun onClick(widget: View) = onViewMore()
+            override fun updateDrawState(ds: android.text.TextPaint) {
+                ds.color = 0xFF9D1E42.toInt()
+            }
+        }
+        val clipped = SpannableStringBuilder(content.substring(0, start)).append(lastLine).append(suffix)
+        val buttonStart = clipped.length - more.length
+        clipped.setSpan(span, buttonStart, clipped.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        textView.text = clipped
+        textView.setOnTouchListener { _, event ->
+            val current = textView.layout
+            val line = current.getLineForOffset(buttonStart)
+            val x = event.x - textView.totalPaddingLeft
+            val y = event.y - textView.totalPaddingTop
+            val hit = y >= current.getLineTop(line) && y < current.getLineBottom(line) &&
+                x in current.getPrimaryHorizontal(buttonStart)..current.getPrimaryHorizontal(clipped.length)
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> hit
+                MotionEvent.ACTION_UP -> {
+                    if (hit) span.onClick(textView)
+                    true
+                }
+                else -> true
+            }
+        }
+    }
+
     fun bindSelection(selected: Boolean, toggle: () -> Unit) {
         actionScroller.visibility = View.GONE
         expand.visibility = View.GONE
+        textView.setOnTouchListener(null)
         textView.maxLines = 1
         textView.setPaddingDp(41, 8, 37, 8)
         checkbox.visibility = View.VISIBLE
