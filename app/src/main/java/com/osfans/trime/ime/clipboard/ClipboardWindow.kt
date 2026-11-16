@@ -10,6 +10,9 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.content.res.ColorStateList
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -665,7 +668,22 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     private fun updateHistoryCount(count: Int) {
-        historyCount.text = context.getString(R.string.cherry_clipboard_count, count, prefs.clipboardLimit.getValue())
+        val text = context.getString(R.string.cherry_clipboard_count, count, ClipboardHelper.CHERRY_CAPACITY)
+        val exceeded = count > ClipboardHelper.CHERRY_CAPACITY
+        historyCount.text = if (exceeded) SpannableString(text).apply {
+            setSpan(ForegroundColorSpan(Color.RED), 0, count.toString().length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        } else {
+            text
+        }
+        historyCount.setOnClickListener(if (exceeded) View.OnClickListener {
+            service.showDialog(AlertDialog.Builder(context)
+                .setMessage(R.string.cherry_clipboard_over_capacity)
+                .setPositiveButton(R.string.cherry_clipboard_capacity_acknowledge, null)
+                .create())
+        } else {
+            null
+        })
+        historyCount.isClickable = exceeded
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

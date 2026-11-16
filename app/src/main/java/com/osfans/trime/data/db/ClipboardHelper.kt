@@ -13,6 +13,7 @@ import androidx.room.Room
 import androidx.room.withTransaction
 import com.osfans.trime.data.prefs.AppPrefs
 import com.osfans.trime.data.prefs.PreferenceDelegate
+import com.osfans.trime.data.theme.ThemeManager
 import com.osfans.trime.util.WeakHashSet
 import com.osfans.trime.util.matchesAny
 import com.osfans.trime.util.removeRegexSet
@@ -28,6 +29,10 @@ import timber.log.Timber
 object ClipboardHelper :
     ClipboardManager.OnPrimaryClipChangedListener,
     CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default) {
+    const val CHERRY_CAPACITY = 300
+
+    private val usesCherryProfile: Boolean
+        get() = ThemeManager.prefs.selectedTheme.getValue() == "baidu_cherry.trime"
     private lateinit var clbDb: Database
     private lateinit var clbDao: DatabaseDao
 
@@ -71,7 +76,7 @@ object ClipboardHelper :
 
     @Keep
     private val limitListener = PreferenceDelegate.OnChangeListener<Int> { _, _ ->
-        launch { removeOutdated() }
+        if (!usesCherryProfile) launch { removeOutdated() }
     }
 
     private val compareRules: Set<Regex> by lazy {
@@ -199,7 +204,7 @@ object ClipboardHelper :
                     val insertedBean =
                         clbDb.withTransaction {
                             val rowId = clbDao.insert(bean)
-                            removeOutdated()
+                            if (usesCherryProfile) clbDao.trimUnpinnedToTotalLimit(CHERRY_CAPACITY) else removeOutdated()
                             updateItemCount()
                             clbDao.get(rowId) ?: bean
                         }

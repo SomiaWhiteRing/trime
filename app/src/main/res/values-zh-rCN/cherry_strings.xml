@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="cherry_clipboard_all">全部</string>
+    <string name="cherry_clipboard_over_capacity">剪贴板数量已经超出上限，继续复制会删除最后的内容</string>
+    <string name="cherry_clipboard_capacity_acknowledge">我知道了</string>
     <string name="cherry_clipboard_expand">展开剪贴板记录</string>
     <string name="cherry_clipboard_search">搜索</string>
     <string name="cherry_clipboard_multi_select">多选</string>

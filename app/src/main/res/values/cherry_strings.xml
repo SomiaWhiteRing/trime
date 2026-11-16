@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="cherry_clipboard_all">All</string>
+    <string name="cherry_clipboard_over_capacity">The clipboard limit has been exceeded. Copying again will remove the oldest content.</string>
+    <string name="cherry_clipboard_capacity_acknowledge">Got it</string>
     <string name="cherry_clipboard_expand">Expand clipboard item</string>
     <string name="cherry_clipboard_search">Search</string>
     <string name="cherry_clipboard_multi_select">Multi-select</string>
