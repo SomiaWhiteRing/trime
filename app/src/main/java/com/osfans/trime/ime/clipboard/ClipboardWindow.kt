@@ -70,6 +70,7 @@ import org.kodein.di.instance
 import splitties.dimensions.dp
 import splitties.views.recyclerview.verticalLayoutManager
 import java.util.Calendar
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.BarBoardWindow(di) {
@@ -826,13 +827,21 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     if (opensHistory) {
                         // Keep the filters and empty counter visible before showing the loaded history.
                         layout.doOnPreDraw {
-                            layout.postDelayed({
-                                if (layout.isAttachedToWindow) {
+                            // Round the observed exposure time up to whole display frames.
+                            val refreshRate = layout.display?.refreshRate ?: 60f
+                            var frames = ceil(refreshRate / 10f).toInt().coerceAtLeast(1)
+                            layout.postOnAnimation(object : Runnable {
+                                override fun run() {
+                                    if (!layout.isAttachedToWindow) return
+                                    if (--frames > 0) {
+                                        layout.postOnAnimation(this)
+                                        return
+                                    }
                                     showHistory = true
                                     clipboardPage.recyclerView.alpha = 1f
                                     updateHistoryCount(historyItems)
                                 }
-                            }, 100L)
+                            })
                         }
                     }
                 }
