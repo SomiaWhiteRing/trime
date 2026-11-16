@@ -18,6 +18,7 @@ import com.osfans.trime.core.RimeMessage
 import com.osfans.trime.core.SchemaItem
 import com.osfans.trime.daemon.RimeSession
 import com.osfans.trime.data.theme.Theme
+import com.osfans.trime.data.theme.model.KeyActionToken
 import com.osfans.trime.data.theme.model.TextKeyboard
 import com.osfans.trime.ime.broadcast.EnterKeyDisplayDelegate
 import com.osfans.trime.ime.broadcast.InputBroadcastReceiver
@@ -170,8 +171,19 @@ class KeyboardWindow(di: DI) :
         currentKeyboardId = target
         lastKeyboardId = target
 
-        val config = selectKeyboardConfig(target)
-        val keyboard = activeKeyboard ?: Keyboard(context, theme, computeAllowedWidth(), config)
+        val keyboard = activeKeyboard ?: run {
+            var config = selectKeyboardConfig(target)
+            if (config != null && "cherry_edit" in presetKeyboardIds && target in cherryAlphabetKeyboards && !isCherryEnglishKeyboard) {
+                config = config.copy(keys = config.keys.map { key ->
+                    if (key.click == KeyActionToken.Plain("CherryNumber") && key.composing == null) {
+                        key.copy(composing = KeyActionToken.Plain("APOSTROPHE"))
+                    } else {
+                        key
+                    }
+                })
+            }
+            Keyboard(context, theme, computeAllowedWidth(), config)
+        }
         val view = currentKeyboardView ?: KeyboardView(context, theme, keyboard, popup, service, keyboardActionListener, enterKeyDisplay)
 
         if (activeKeyboard == null) {
