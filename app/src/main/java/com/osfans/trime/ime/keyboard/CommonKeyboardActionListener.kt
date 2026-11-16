@@ -220,7 +220,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
             private fun handleLiquidKeyboard(arg: String) {
                 // for compatibility
                 if (arg == "剪贴" || arg == "clipboard") {
-                    windowManager.attachWindow(ClipboardWindow(di))
+                    ClipboardWindow(di).open()
                     return
                 }
                 val liquidTagList = theme.liquidKeyboard.getTagList()
@@ -281,7 +281,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
 
             private fun handleClipboardWindow(arg: String) {
                 val tabIndex = arg.toIntOrNull()?.coerceIn(0, 1) ?: 0
-                windowManager.attachWindow(ClipboardWindow(di, tabIndex))
+                ClipboardWindow(di, tabIndex).open()
             }
 
             private fun handleColorScheme(arg: String) {

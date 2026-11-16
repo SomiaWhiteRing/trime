@@ -25,6 +25,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.paging.LoadState
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.filter
@@ -47,6 +48,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -195,6 +197,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 adapter = clipboardBeansAdapter
             }
             if (usesCherryLayout) {
+                root.setBackgroundColor(0xFF353535.toInt())
+                recyclerView.itemAnimator = null
                 val categories = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -469,28 +473,56 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    override fun onAttached() {
-        wasAttached = true
-        clipboardLayout.viewPager.setCurrentItem(initialTab, false)
+    fun open() {
+        val keyboard by instance<KeyboardWindow>()
+        if (!usesCherryLayout || !windowManager.isAttached(keyboard)) {
+            windowManager.attachWindow(this)
+            return
+        }
+        service.lifecycleScope.launch {
+            if (initialTab == 0) {
+                startClipboardPaging()
+                clipboardBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
+                updateHistoryCount(clipboardBeansAdapter.itemCount)
+            } else {
+                startCollectionPaging()
+                collectionBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
+            }
+            if (windowManager.isAttached(keyboard)) {
+                windowManager.attachWindow(this@ClipboardWindow)
+            } else {
+                clipboardBeansSubmitJob?.cancel()
+                collectionBeansSubmitJob?.cancel()
+            }
+        }
+    }
+
+    private fun startClipboardPaging() {
         clipboardBeansSubmitJob = service.lifecycleScope.launch {
             clipboardPages().collectLatest { clipboardBeansAdapter.submitData(it) }
         }
+    }
+
+    private fun startCollectionPaging() {
+        collectionBeansSubmitJob = service.lifecycleScope.launch {
+            collectionBeansPager.flow.collectLatest { collectionBeansAdapter.submitData(it) }
+        }
+    }
+
+    override fun onAttached() {
+        wasAttached = true
+        clipboardLayout.viewPager.setCurrentItem(initialTab, false)
+        if (clipboardBeansSubmitJob == null) startClipboardPaging()
+        if (collectionBeansSubmitJob == null) startCollectionPaging()
         if (usesCherryLayout) {
             clipboardCountJob = service.lifecycleScope.launch {
-                ClipboardHelper.observeItemCount().collect { count ->
-                    historyCount.text = context.getString(
-                        R.string.cherry_clipboard_count,
-                        count,
-                        prefs.clipboardLimit.getValue(),
-                    )
-                }
+                ClipboardHelper.observeItemCount().collect(::updateHistoryCount)
             }
         }
-        collectionBeansSubmitJob = service.lifecycleScope.launch {
-            collectionBeansPager.flow.collect {
-                collectionBeansAdapter.submitData(it)
-            }
-        }
+    }
+
+    private fun updateHistoryCount(count: Int) {
+        historyCount.text = context.getString(R.string.cherry_clipboard_count, count, prefs.clipboardLimit.getValue())
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
