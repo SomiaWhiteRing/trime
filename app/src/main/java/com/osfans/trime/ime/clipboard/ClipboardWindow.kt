@@ -557,11 +557,15 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         viewPager.apply {
             adapter = clipboardPagesAdapter
             isUserInputEnabled = !usesCherryLayout
-            if (usesCherryLayout) registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageSelected(position: Int) {
-                    if (position != 0 && clipboardBeansAdapter.selection != null) updateSelection(null)
-                }
-            })
+            if (usesCherryLayout) {
+                // A no-op transformer disables ViewPager2's RecyclerView item animations, as in CHERRY.
+                setPageTransformer { _, _ -> }
+                registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                    override fun onPageSelected(position: Int) {
+                        if (position != 0 && clipboardBeansAdapter.selection != null) updateSelection(null)
+                    }
+                })
+            }
         }
         titleUi.apply {
             tabLayout.onConfigureTab(viewPager) { tabUi, position ->
