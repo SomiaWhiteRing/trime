@@ -62,15 +62,18 @@ abstract class ClipboardAdapter(
     }
 
     private var popupMenu: PopupMenu? = null
+    private var expandedClipboardId: Int? = null
     var compact = false
         set(value) {
             if (field == value) return
             field = value
+            expandedClipboardId = null
             notifyDataSetChanged()
         }
     var selection: Set<Int>? = null
         set(value) {
             field = value
+            if (value != null) expandedClipboardId = null
             notifyDataSetChanged()
         }
 
@@ -99,7 +102,7 @@ abstract class ClipboardAdapter(
                 return
             }
             if (cherry && enableCollection) {
-                bindExpansion(preview, content, compact, listOf(
+                bindExpansion(preview, content, compact, expandedClipboardId == bean.id, listOf(
                     Triple(R.string.word_segment, "segment") { onSegment(bean) },
                     Triple(R.string.cherry_clipboard_translate, "translate") { onTranslate(bean) },
                     Triple(R.string.cherry_clipboard_search, "search") { onSearch(bean) },
@@ -111,7 +114,17 @@ abstract class ClipboardAdapter(
                     },
                     Triple(R.string.delete, "delete") { onDelete(bean.id) },
                     Triple(R.string.cherry_clipboard_multi_select, "multi-select") { onMultiSelect(bean.id) },
-                ))
+                )) {
+                    val position = holder.bindingAdapterPosition
+                    if (position == RecyclerView.NO_POSITION) return@bindExpansion
+                    val previousId = expandedClipboardId
+                    expandedClipboardId = if (previousId == bean.id) null else bean.id
+                    if (previousId != null && previousId != bean.id) {
+                        val previous = snapshot().indexOfFirst { it?.id == previousId }
+                        if (previous >= 0) notifyItemChanged(previous)
+                    }
+                    notifyItemChanged(position)
+                }
             }
             root.setOnClickListener {
                 onPaste(bean)

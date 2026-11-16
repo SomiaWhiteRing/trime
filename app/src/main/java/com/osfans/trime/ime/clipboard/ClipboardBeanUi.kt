@@ -147,7 +147,14 @@ class ClipboardBeanUi(
         pin.visibility = if (pinned) View.VISIBLE else View.GONE
     }
 
-    fun bindExpansion(preview: String, content: String, compact: Boolean, entries: List<Triple<Int, String, () -> Unit>>) {
+    fun bindExpansion(
+        preview: String,
+        content: String,
+        compact: Boolean,
+        expanded: Boolean,
+        entries: List<Triple<Int, String, () -> Unit>>,
+        onToggle: () -> Unit,
+    ) {
         checkbox.visibility = View.GONE
         expand.visibility = View.VISIBLE
         expand.updateLayoutParams<ConstraintLayout.LayoutParams> {
@@ -180,19 +187,16 @@ class ClipboardBeanUi(
                 marginEnd = ctx.dp(38)
             })
         }
-        val setExpanded = { expanded: Boolean ->
-            actionScroller.visibility = if (expanded) View.VISIBLE else View.GONE
-            textView.maxLines = when {
-                expanded -> 6
-                compact -> 1
-                else -> 2
-            }
-            textView.text = if (expanded) content else preview
-            expand.setImageResource(if (expanded) R.drawable.ic_cherry_clipboard_collapse else R.drawable.ic_cherry_clipboard_expand)
+        actionScroller.visibility = if (expanded) View.VISIBLE else View.GONE
+        textView.maxLines = when {
+            expanded -> 6
+            compact -> 1
+            else -> 2
         }
-        expand.setOnClickListener { setExpanded(actionScroller.visibility != View.VISIBLE) }
+        textView.text = if (expanded) content else preview
+        expand.setImageResource(if (expanded) R.drawable.ic_cherry_clipboard_collapse else R.drawable.ic_cherry_clipboard_expand)
+        expand.setOnClickListener { onToggle() }
         actionScroller.scrollTo(0, 0)
-        setExpanded(false)
     }
 
     fun bindSelection(selected: Boolean, toggle: () -> Unit) {
