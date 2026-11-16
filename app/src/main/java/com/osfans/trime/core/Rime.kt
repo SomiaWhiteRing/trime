@@ -10,6 +10,7 @@ import com.osfans.trime.core.data.DataManager
 import com.osfans.trime.core.data.UserDataManager
 import com.osfans.trime.data.opencc.OpenCCDictManager
 import com.osfans.trime.data.prefs.AppPrefs
+import com.osfans.trime.data.theme.ThemeManager
 import com.osfans.trime.ime.core.InlinePreeditMode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -439,6 +440,10 @@ class Rime :
         if (tipsText.isEmpty()) return
 
         lastAsciiTipsText = tipsText
+        if (ThemeManager.isCherryThemeActive) {
+            asciiSwitchTipsJob?.cancel()
+            return
+        }
 
         val tips = CompositionProto(tipsText)
         messageFlow_.tryEmit(RimeMessage.CompositionMessage(tips))
@@ -446,6 +451,7 @@ class Rime :
         asciiSwitchTipsJob?.cancel()
         asciiSwitchTipsJob = lifecycleScope.launch {
             delay(1000L)
+            if (ThemeManager.isCherryThemeActive) return@launch
             val ctx = getRimeContext()
             handleRimeMessage(6, arrayOf(ctx.composition))
         }

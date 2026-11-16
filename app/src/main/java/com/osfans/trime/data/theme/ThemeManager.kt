@@ -30,6 +30,8 @@ object ThemeManager {
     }
 
     private lateinit var _activeTheme: Theme
+    internal val isCherryThemeActive: Boolean
+        get() = ::_activeTheme.isInitialized && "cherry_edit" in _activeTheme.presetKeyboards
 
     private var _activeFindings: List<ThemeDiagnostics.Finding>? = null
 
