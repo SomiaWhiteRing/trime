@@ -10,6 +10,7 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
 import android.view.MotionEvent
@@ -165,13 +166,17 @@ internal class CherrySymbolsWindow(
             background = scope.drawable("cherry-symbol-sidebar.png")
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
+                setPadding(0, context.dp(4f / 3).roundToInt(), 0, 0)
                 categoryLabels = catalog.groups.mapIndexed { index, group ->
-                    label(context, group.label, 15f) {
+                    label(context, group.label, 13f) {
                         category = index
                         symbolScroll.stopPageScroll()
                         symbolScroll.scrollTo(0, 0)
                         render()
-                    }.also { addView(it, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, context.dp(40))) }
+                    }.also {
+                        it.setTextColor(0xffb3b3b3.toInt())
+                        addView(it, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, context.dp(119f / 3).roundToInt()))
+                    }
                 }
             })
         }
@@ -227,10 +232,16 @@ internal class CherrySymbolsWindow(
     private fun render() {
         categoryLabels.forEachIndexed { index, label ->
             label.isSelected = index == category
-            label.background = if (label.isSelected) GradientDrawable().apply {
-                setColor(0xFF141414.toInt())
-                cornerRadius = context.dp(4).toFloat()
-            } else null
+            label.background = if (label.isSelected) {
+                val selection = GradientDrawable().apply {
+                    setColor(0xff171717.toInt())
+                    cornerRadius = context.dp(4).toFloat()
+                }
+                InsetDrawable(selection, context.dp(6), context.dp(4f / 3).roundToInt(), context.dp(10f / 3).roundToInt(), 0)
+            } else {
+                null
+            }
+            label.setPadding(context.dp(3), 0, 0, 0)
         }
         val entries = if (category == 0) recent() else catalog.groups[category].entries
         val rows = mutableListOf<MutableList<Pair<String, Int>>>()
