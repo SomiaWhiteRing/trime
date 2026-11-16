@@ -381,7 +381,8 @@ class InputView(
         } finally {
             withContext(NonCancellable + Dispatchers.Main.immediate) {
                 cherryLanguageUpdates = null
-                updates.forEach(::handleRimeMessage)
+                // A language switch can emit transient schema, ASCII, and candidate states.
+                updates.asReversed().distinctBy { it.messageType }.asReversed().forEach(::handleRimeMessage)
             }
         }
     }
