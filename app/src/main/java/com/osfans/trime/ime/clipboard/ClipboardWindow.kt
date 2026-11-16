@@ -805,15 +805,36 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         if (clipboardBeansSubmitJob == null) startClipboardPaging()
         if (collectionBeansSubmitJob == null) startCollectionPaging()
         if (usesCherryLayout) {
+            val opensHistory = initialTab == 0
+            var showHistory = !opensHistory
+            var historyItems = 0
+            if (opensHistory) {
+                clipboardPage.recyclerView.alpha = 0f
+                updateHistoryCount(0)
+            }
             clipboardCountJob = service.lifecycleScope.launch {
-                ClipboardHelper.observeItemCount().collect(::updateHistoryCount)
+                ClipboardHelper.observeItemCount().collect { count ->
+                    historyItems = count
+                    if (showHistory) updateHistoryCount(count)
+                }
             }
             clipboardLayout.doOnPreDraw { layout ->
-                // Draw the outer panel once before revealing the title tabs and contents together.
                 layout.post {
                     if (!layout.isAttachedToWindow) return@post
                     clipboardLayout.titleUi.tabLayout.alpha = 1f
                     clipboardLayout.viewPager.alpha = 1f
+                    if (opensHistory) {
+                        // The original draws the tabs, filters and empty counter before its history.
+                        layout.doOnPreDraw {
+                            layout.post {
+                                if (layout.isAttachedToWindow) {
+                                    showHistory = true
+                                    clipboardPage.recyclerView.alpha = 1f
+                                    updateHistoryCount(historyItems)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
