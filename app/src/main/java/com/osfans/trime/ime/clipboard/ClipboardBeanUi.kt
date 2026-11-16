@@ -128,7 +128,10 @@ class ClipboardBeanUi(
                 add(LinearLayout(ctx).apply {
                     orientation = LinearLayout.VERTICAL
                     addView(layout, LinearLayout.LayoutParams(matchParent, wrapContent))
-                    addView(actionScroller, LinearLayout.LayoutParams(matchParent, dp(38)))
+                    addView(actionScroller, LinearLayout.LayoutParams(matchParent, dp(44)).apply {
+                        topMargin = dp(7)
+                        bottomMargin = dp(12)
+                    })
                 }, lParams(matchParent, wrapContent))
             } else {
                 add(layout, lParams(matchParent, matchParent))
