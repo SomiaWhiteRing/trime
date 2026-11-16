@@ -645,6 +645,15 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         ClipboardPageUi(context).apply {
             root.removeView(recyclerView)
             root.setBackgroundColor(0xFF353535.toInt())
+            val recommendations = CherryClipboardRecommendationView.loadProfile()
+            if (recommendations.isNotEmpty()) {
+                root.addView(CherryClipboardRecommendationView(context, scope, recommendations) { phrase ->
+                    if (service.commitText(phrase) && clipboardReturnAfterPaste) {
+                        windowManager.attachWindow(KeyboardWindow)
+                    }
+                }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                return@apply
+            }
             root.addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
