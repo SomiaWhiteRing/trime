@@ -13,6 +13,7 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.widget.TextView
 import com.osfans.trime.R
@@ -48,9 +49,13 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
         }
     }
 
+    private val size = theme.style.run { candidateViewHeight + commentHeight }
     val backButton = if (cherry) cherryButton("clipboard-title-back.png") else null
     val actionButton = if (cherry) {
-        cherryButton("clipboard-title-menu.png")
+        cherryButton("clipboard-title-menu.png").apply {
+            // The menu bitmap includes a narrow divider. Draw the shadow across the title itself.
+            clipBounds = Rect(dp(3), 0, dp(size), dp(size))
+        }
     } else {
         ToolButton(ctx, R.drawable.ic_baseline_delete_sweep_24, scope)
     }
@@ -63,7 +68,12 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
         translationY = dp(1f / 3f)
     }
 
-    private val size = theme.style.run { candidateViewHeight + commentHeight }
+    private val menuDivider = View(ctx).apply {
+        background = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(0x00000000, 0x13000000, 0x25000000),
+        )
+    }
     private val settingsTitle = TextView(ctx).apply {
         setText(R.string.clipboard)
         textSize = 14f
@@ -74,6 +84,7 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     fun setSettingsOpen(open: Boolean) {
         tabLayout.visibility = if (open) View.GONE else View.VISIBLE
         actionButton.visibility = if (open) View.GONE else View.VISIBLE
+        menuDivider.visibility = actionButton.visibility
         settingsTitle.visibility = if (open) View.VISIBLE else View.GONE
     }
 
@@ -100,6 +111,10 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
             },
         )
         if (cherry) {
+            add(menuDivider, lParams(dp(10f / 3).roundToInt(), dp(34)) {
+                endOfParent(dp(size) - dp(8f / 3).roundToInt())
+                topOfParent(dp(10f / 3).roundToInt())
+            })
             add(settingsTitle, lParams(wrapContent, wrapContent) {
                 startOfParent(dp(47))
                 centerVertically()
