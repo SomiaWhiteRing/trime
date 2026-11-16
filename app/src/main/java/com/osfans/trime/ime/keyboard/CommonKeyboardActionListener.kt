@@ -239,10 +239,9 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
             }
 
             private fun switchCherryLanguage(prediction: Boolean? = null) {
+                val returnToChinese = keyboardWindow.isCherryEnglishKeyboard
                 service.postRimeJob {
-                    val current = statusCached.schemaId
-                    val composingEnglish = current == "cherry_english"
-                    val directEnglish = getRuntimeOption("ascii_mode")
+                    val current = selectedSchemaId()
                     val chinese = cherryPreferences.getString("chinese_schema", null)
                         ?.takeIf { it.isNotBlank() } ?: "luna_pinyin"
                     commitComposition()
@@ -262,19 +261,28 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                         }
 
                         null -> when {
-                            composingEnglish -> {
-                                if (selectSchema(chinese)) setRuntimeOption("ascii_mode", false)
+                            returnToChinese -> {
+                                val needsChineseSchema = current == "cherry_english" || current.isBlank()
+                                if (needsChineseSchema && !selectSchema(chinese)) return@postRimeJob
+                                if (getRuntimeOption("ascii_mode")) {
+                                    setRuntimeOption("ascii_mode", false)
+                                } else if (!needsChineseSchema) {
+                                    // The engine is already in Chinese and will not emit a mode change.
+                                    service.lifecycleScope.launch { keyboardWindow.switchKeyboard("qwerty") }
+                                }
                             }
 
-                            directEnglish -> setRuntimeOption("ascii_mode", false)
-
                             else -> {
-                                if (current.isNotBlank()) {
+                                if (current.isNotBlank() && current != "cherry_english") {
                                     cherryPreferences.edit().putString("chinese_schema", current).apply()
                                 }
                                 val usePrediction = cherryPreferences.getBoolean("prediction", false)
                                 if (!usePrediction || !selectSchema("cherry_english")) {
-                                    setRuntimeOption("ascii_mode", true)
+                                    if (getRuntimeOption("ascii_mode")) {
+                                        service.lifecycleScope.launch { keyboardWindow.switchKeyboard("cherry_ascii") }
+                                    } else {
+                                        setRuntimeOption("ascii_mode", true)
+                                    }
                                 }
                             }
                         }
