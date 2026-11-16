@@ -127,6 +127,7 @@ class Rime :
                     }
                 }
             check(success) { "Rime deploy failed" }
+            withRimeContext { publishStatusAfterReload() }
         } finally {
             unregisterRimeMessageHandler(deployHandler)
         }
@@ -135,6 +136,16 @@ class Rime :
     override suspend fun updateConfig() = withRimeContext {
         exitRime()
         startRime(false)
+        publishStatusAfterReload()
+    }
+
+    private fun publishStatusAfterReload() {
+        val previous = statusCached
+        val status = getRimeStatus()
+        handleRimeMessage(8, arrayOf(status))
+        if (previous.schemaId == status.schemaId && previous.isAsciiMode != status.isAsciiMode) {
+            messageFlow_.tryEmit(RimeMessage.OptionMessage(RimeMessage.OptionMessage.Data("ascii_mode", status.isAsciiMode)))
+        }
     }
 
     override suspend fun syncUserData(): Boolean = lock.withLock {
