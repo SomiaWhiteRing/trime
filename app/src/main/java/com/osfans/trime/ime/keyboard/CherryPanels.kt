@@ -76,7 +76,12 @@ internal class CherryNumberWindow(
         cell(hitTarget(context, "符号") {
             manager.attachWindow(CherrySymbolsWindow(di, catalog) { manager.attachWindow(this@CherryNumberWindow) })
         }.withNumericPress("symbols"), 660, 527, 220, 175)
-        cell(hitTarget(context, "退格") { key("BackSpace") }.withNumericPress("backspace"), 890, 2, 226, 175)
+        val backspace = GestureFrame(context).apply {
+            contentDescription = "退格"
+            isRepeatable = true
+            setOnClickListener { key("BackSpace") }
+        }.withNumericPress("backspace")
+        cell(backspace, 890, 2, 226, 175)
         val enter = label(context, enterKey.keyLabel, 14f) { key("Return") }.apply {
             withNumericPress("enter", scope.drawable("cherry-number-enter.png"))
             setPadding(0, 0, 0, context.dp(5))
