@@ -25,6 +25,7 @@ import splitties.views.dsl.constraintlayout.centerInParent
 import splitties.views.dsl.constraintlayout.lParams
 import splitties.views.dsl.core.add
 import splitties.views.dsl.recyclerview.recyclerView
+import kotlin.math.roundToInt
 
 @SuppressLint("ViewConstructor")
 class UnrolledCandidateLayout(
@@ -65,7 +66,7 @@ class UnrolledCandidateLayout(
         val sidebar = LinearLayout(context).apply {
             id = View.generateViewId()
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(8), dp(5), dp(4), dp(13))
+            setPadding(dp(28f / 3).roundToInt(), dp(17f / 3).roundToInt(), dp(4), dp(13))
             background = scope.drawable("candidate-sidebar.png")
         }
         addView(sidebar, LayoutParams(dp(65), 0).apply {
@@ -95,7 +96,7 @@ class UnrolledCandidateLayout(
             bottomToBottom = LayoutParams.UNSET
             bottomToTop = footer.id
         }
-        recyclerView.setPadding(dp(69), dp(2), dp(2), 0)
+        recyclerView.setPadding(dp(69), dp(8f / 3).roundToInt(), dp(2), 0)
         recyclerView.clipToPadding = false
         recyclerView.scrollBarSize = dp(2)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

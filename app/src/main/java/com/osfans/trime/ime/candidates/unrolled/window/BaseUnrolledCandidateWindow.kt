@@ -200,7 +200,7 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
     private fun updateAlternatives() {
         val letter = rawInput.getOrNull(alternativeIndex)?.lowercaseChar()?.takeIf { it in 'a'..'z' }
         val number = letter?.let { "qwertyuiop".indexOf(it) }?.takeIf { it >= 0 }?.let { "1234567890"[it] }
-        val values = listOf(letter, number, letter?.uppercaseChar())
+        val values = listOfNotNull(letter, number, letter?.uppercaseChar())
         alternatives.forEachIndexed { index, view ->
             val value = values.getOrNull(index)
             view.text = value?.toString().orEmpty()
