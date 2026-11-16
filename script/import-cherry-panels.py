@@ -64,6 +64,8 @@ def sprite(sheet,index):
 config=resource('port/res/default.css')
 for filename, style in (
     ("cherry-shift-off", 105), ("cherry-shift-on", 131), ("cherry-shift-marker", 250),
+    ("cherry-language-chinese", 148), ("cherry-language-english", 108),
+    ("cherry-abc-direct", 109), ("cherry-abc-composing", 110),
 ):
     sheet,index=config[f'STYLE{style}']['nm_img'].split(',')
     sprite(sheet,int(index)).save(assets/(filename+'.png'))

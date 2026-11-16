@@ -243,7 +243,8 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                     val current = statusCached.schemaId
                     val composingEnglish = current == "cherry_english"
                     val directEnglish = getRuntimeOption("ascii_mode")
-                    val chinese = cherryPreferences.getString("chinese_schema", "luna_pinyin") ?: "luna_pinyin"
+                    val chinese = cherryPreferences.getString("chinese_schema", null)
+                        ?.takeIf { it.isNotBlank() } ?: "luna_pinyin"
                     commitComposition()
                     when (prediction) {
                         true -> {
@@ -268,7 +269,9 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                             directEnglish -> setRuntimeOption("ascii_mode", false)
 
                             else -> {
-                                cherryPreferences.edit().putString("chinese_schema", current).apply()
+                                if (current.isNotBlank()) {
+                                    cherryPreferences.edit().putString("chinese_schema", current).apply()
+                                }
                                 val usePrediction = cherryPreferences.getBoolean("prediction", false)
                                 if (!usePrediction || !selectSchema("cherry_english")) {
                                     setRuntimeOption("ascii_mode", true)

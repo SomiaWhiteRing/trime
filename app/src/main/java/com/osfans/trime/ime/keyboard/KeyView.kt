@@ -64,6 +64,16 @@ class KeyView(
             listOf("off", "on", "marker").map { ColorManager.getDrawable("cherry-shift-$it.png") }
         }
     }
+    private val cherryLanguageArtwork by lazy {
+        if ("cherry_edit" !in theme.presetKeyboards) return@lazy null
+        val name = when (key.click?.command) {
+            "cherry_language" -> if (key.click?.getLabel(keyboard) == "En") "language-english" else "language-chinese"
+            "cherry_english_enable" -> "abc-direct"
+            "cherry_english_disable" -> "abc-composing"
+            else -> return@lazy null
+        }
+        ColorManager.getDrawable("cherry-$name.png")
+    }
 
     private val cachedLocation = intArrayOf(0, 0)
     private val cachedBounds = Rect()
@@ -285,7 +295,13 @@ class KeyView(
             if (it == "enter_labels") keyboardView.labelEnter else it
         }
 
-        if (!drawCherryShift(canvas) && label.isNotEmpty()) {
+        val languageArtwork = cherryLanguageArtwork
+        if (languageArtwork != null) {
+            val scale = keyboardView.width / 1080f
+            val x = (width + paddingLeft - paddingRight) / 2f
+            val y = (height + paddingTop - paddingBottom) / 2f - 9f * scale
+            drawCherrySprite(canvas, languageArtwork, x, y, scale)
+        } else if (!drawCherryShift(canvas) && label.isNotEmpty()) {
             drawLabel(canvas, label)
         }
 
@@ -306,17 +322,20 @@ class KeyView(
         val scale = keyboardView.width / 1080f
         val centerX = (width + paddingLeft - paddingRight) / 2f
         val centerY = (height + paddingTop - paddingBottom) / 2f - 9f * scale
-        fun draw(sprite: Drawable, x: Float, y: Float) {
-            val w = (sprite.intrinsicWidth * scale).roundToInt()
-            val h = (sprite.intrinsicHeight * scale).roundToInt()
-            val left = (x - w / 2f).roundToInt()
-            val top = (y - h / 2f).roundToInt()
-            sprite.setBounds(left, top, left + w, top + h)
-            sprite.draw(canvas)
+        drawCherrySprite(canvas, arrow, centerX, centerY, scale)
+        if (active) cherryShiftArtwork[2]?.let {
+            drawCherrySprite(canvas, it, centerX + 26f * scale, centerY - 26f * scale, scale)
         }
-        draw(arrow, centerX, centerY)
-        if (active) cherryShiftArtwork[2]?.let { draw(it, centerX + 26f * scale, centerY - 26f * scale) }
         return true
+    }
+
+    private fun drawCherrySprite(canvas: Canvas, sprite: Drawable, x: Float, y: Float, scale: Float) {
+        val w = (sprite.intrinsicWidth * scale).roundToInt()
+        val h = (sprite.intrinsicHeight * scale).roundToInt()
+        val left = (x - w / 2f).roundToInt()
+        val top = (y - h / 2f).roundToInt()
+        sprite.setBounds(left, top, left + w, top + h)
+        sprite.draw(canvas)
     }
 
     private fun drawBackground(canvas: Canvas, k: Key) {
