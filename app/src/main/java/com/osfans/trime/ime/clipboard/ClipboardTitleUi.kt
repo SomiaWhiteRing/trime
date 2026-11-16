@@ -59,7 +59,9 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
         ctx,
         ToolBar.Button(foreground = ToolBar.Button.Foreground(style = image, padding = 0)),
         scope,
-    )
+    ).apply {
+        translationY = dp(1f / 3f)
+    }
 
     private val size = theme.style.run { candidateViewHeight + commentHeight }
     private val settingsTitle = TextView(ctx).apply {
