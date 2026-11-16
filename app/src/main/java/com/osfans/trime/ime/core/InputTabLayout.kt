@@ -27,6 +27,8 @@ class InputTabLayout(context: Context) : LinearLayout(context) {
 
         var position: Int = -1
 
+        var activeStyle: ((Boolean) -> Unit)? = null
+
         val label = textView()
 
         override val root = view(::GestureFrame) {
@@ -43,6 +45,10 @@ class InputTabLayout(context: Context) : LinearLayout(context) {
         }
 
         fun setActive(active: Boolean) {
+            activeStyle?.let {
+                it(active)
+                return
+            }
             val color = label.currentTextColor
                 .alpha(if (active) 1f else 0.5f)
             label.setTextColor(color)
@@ -92,7 +98,10 @@ class InputTabLayout(context: Context) : LinearLayout(context) {
 
     /** Re-runs [setup] on the existing tabs, e.g. to re-apply scheme colors. */
     fun reconfigureTabs(setup: (TabUi, Int) -> Unit) {
-        tabs.forEach { tabUi -> setup(tabUi, tabUi.position) }
+        tabs.forEach { tabUi ->
+            setup(tabUi, tabUi.position)
+            tabUi.setActive(tabUi.position == selected)
+        }
     }
 
     private fun activateTab(index: Int) {

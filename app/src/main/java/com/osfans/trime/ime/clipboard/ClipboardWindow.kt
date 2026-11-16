@@ -8,11 +8,13 @@ package com.osfans.trime.ime.clipboard
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.util.Patterns
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.Pager
@@ -52,6 +54,9 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private val windowManager: BoardWindowManager by instance()
     private val scope: ThemeScope by instance()
     private val theme: Theme get() = scope.theme
+
+    override val showTitle: Boolean
+        get() = !usesCherryLayout
 
     private lateinit var clipboardLayout: ClipboardLayout
     private lateinit var clipboardPagesAdapter: ClipboardPagesAdapter
@@ -257,18 +262,27 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             tabLayout.onConfigureTab(viewPager) { tabUi, position ->
                 configureTab(tabUi, position)
             }
-            deleteAllButton.setOnClickListener {
-                val currentItem = viewPager.currentItem
-                when (currentItem) {
-                    0 -> promptDeleteAll {
-                        ClipboardHelper.deleteAll(ClipboardHelper.haveUnpinned())
+            backButton?.setOnClickListener { windowManager.attachWindow(KeyboardWindow) }
+            deleteAllButton.setOnClickListener { anchor ->
+                if (usesCherryLayout) {
+                    PopupMenu(context, anchor).apply {
+                        menu.add(R.string.delete_all).setOnMenuItemClickListener {
+                            deleteCurrentPage(viewPager.currentItem)
+                            true
+                        }
+                        show()
                     }
-
-                    else -> promptDeleteAll {
-                        CollectionHelper.deleteAll(CollectionHelper.haveUnpinned())
-                    }
+                } else {
+                    deleteCurrentPage(viewPager.currentItem)
                 }
             }
+        }
+    }
+
+    private fun deleteCurrentPage(currentItem: Int) {
+        when (currentItem) {
+            0 -> promptDeleteAll { ClipboardHelper.deleteAll(ClipboardHelper.haveUnpinned()) }
+            else -> promptDeleteAll { CollectionHelper.deleteAll(CollectionHelper.haveUnpinned()) }
         }
     }
 
@@ -307,9 +321,21 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             }
         tabUi.label.apply {
             setText(label)
-            textSize = theme.style.candidateTextSize
-            setTypeface(theme.fonts.candidate, Typeface.BOLD)
+            textSize = if (usesCherryLayout) 14f else theme.style.candidateTextSize
+            setTypeface(theme.fonts.candidate, if (usesCherryLayout) Typeface.NORMAL else Typeface.BOLD)
             setTextColor(scope.colors.keyTextColor)
+        }
+        if (usesCherryLayout) {
+            tabUi.root.minimumWidth = context.dp(56)
+            tabUi.root.minimumHeight = context.dp(35)
+            tabUi.activeStyle = { active ->
+                tabUi.label.setTextColor(if (active) 0xFFC51640.toInt() else 0xFFB9B9B9.toInt())
+                tabUi.root.background = if (active) GradientDrawable().apply {
+                    setColor(0xFF343434.toInt())
+                    cornerRadius = context.dp(7).toFloat()
+                    setStroke(context.dp(0.5f).toInt().coerceAtLeast(1), 0xFF575757.toInt())
+                } else null
+            }
         }
     }
 

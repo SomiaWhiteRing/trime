@@ -13,6 +13,8 @@ import androidx.transition.TransitionManager
 import androidx.transition.TransitionSet
 import com.osfans.trime.R
 import com.osfans.trime.ime.broadcast.InputBroadcaster
+import com.osfans.trime.ime.keyboard.CherryNumberWindow
+import com.osfans.trime.ime.keyboard.KeyboardWindow
 import org.kodein.di.DI
 import org.kodein.di.DIAware
 import org.kodein.di.instance
@@ -87,12 +89,16 @@ class BoardWindowManager(override val di: DI) : DIAware {
         if (currentWindow != null) {
             val oldWindow = currentWindow!!
             val oldView = currentView!!
-            prepareAnimation(
-                oldWindow.exitAnimation(window),
-                window.enterAnimation(oldWindow),
-                oldView,
-                newView,
-            )
+            val switchesCherryNumber = oldWindow is CherryNumberWindow && window is KeyboardWindow ||
+                oldWindow is KeyboardWindow && window is CherryNumberWindow
+            if (!switchesCherryNumber) {
+                prepareAnimation(
+                    oldWindow.exitAnimation(window),
+                    window.enterAnimation(oldWindow),
+                    oldView,
+                    newView,
+                )
+            }
             oldWindow.onDetached()
             view.removeView(oldView)
             broadcaster.onWindowDetached(oldWindow)
