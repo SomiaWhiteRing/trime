@@ -35,7 +35,6 @@ import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
-import androidx.paging.LoadState
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.filter
@@ -60,7 +59,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -123,7 +121,6 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
     private var clipboardBeansSubmitJob: Job? = null
     private var clipboardCountJob: Job? = null
-    private var clipboardRevealJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
     private var translationPopup: PopupWindow? = null
     private var deleteConfirmation: PopupWindow? = null
@@ -790,18 +787,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             }
             clipboardLayout.doOnPreDraw { layout ->
                 // Draw the outer panel once before revealing the title tabs and contents together.
-                layout.postOnAnimation {
-                    if (!layout.isAttachedToWindow) return@postOnAnimation
-                    clipboardRevealJob = service.lifecycleScope.launch {
-                        if (initialTab == 0) {
-                            clipboardBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
-                            updateHistoryCount(clipboardBeansAdapter.itemCount)
-                        } else {
-                            collectionBeansAdapter.loadStateFlow.first { it.refresh !is LoadState.Loading }
-                        }
-                        clipboardLayout.titleUi.tabLayout.alpha = 1f
-                        clipboardLayout.viewPager.alpha = 1f
-                    }
+                layout.post {
+                    if (!layout.isAttachedToWindow) return@post
+                    clipboardLayout.titleUi.tabLayout.alpha = 1f
+                    clipboardLayout.viewPager.alpha = 1f
                 }
             }
         }
@@ -864,7 +853,6 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         collectionBeansAdapter.dismissPopupMenu()
         clipboardBeansSubmitJob?.cancel()
         clipboardCountJob?.cancel()
-        clipboardRevealJob?.cancel()
         collectionBeansSubmitJob?.cancel()
     }
 
