@@ -19,7 +19,6 @@ import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.osfans.trime.R
 import com.osfans.trime.core.Candidates
 import com.osfans.trime.core.RimeMessage
 import com.osfans.trime.daemon.RimeSession
@@ -213,14 +212,14 @@ class InputBarDelegate(override val di: DI) :
         candidateUi.unrollButton.setOnClickListener {
             windowManager.attachWindow(FlexboxUnrolledCandidateWindow(di))
         }
-        candidateUi.unrollButton.setIcon(R.drawable.ic_baseline_expand_more_24)
+        candidateUi.setUnrolled(false)
     }
 
     private fun setUnrollButtonToDetach() {
         candidateUi.unrollButton.setOnClickListener {
             windowManager.attachWindow(KeyboardWindow)
         }
-        candidateUi.unrollButton.setIcon(R.drawable.ic_baseline_expand_less_24)
+        candidateUi.setUnrolled(true)
     }
 
     private fun setUnrollButtonEnabled(enabled: Boolean) {

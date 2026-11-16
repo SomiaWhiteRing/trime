@@ -28,6 +28,7 @@ class CandidateUi(
     private val theme: Theme get() = scope.theme
 
     private val cherryArrow = "cherry_edit" in theme.presetKeyboards && scope.drawable("candidate-expand.png") != null
+    private var unrolled = false
 
     val unrollButton =
         (if (cherryArrow) {
@@ -57,8 +58,18 @@ class CandidateUi(
             )
         }
 
+    fun setUnrolled(unrolled: Boolean) {
+        this.unrolled = unrolled
+        refreshColors()
+    }
+
     /** Restyles the candidate bar after a scheme switch. */
     fun refreshColors() {
         unrollButton.refreshColors()
+        if (unrolled) {
+            unrollButton.setIcon(R.drawable.ic_baseline_expand_less_24)
+        } else if (!cherryArrow) {
+            unrollButton.setIcon(R.drawable.ic_baseline_expand_more_24)
+        }
     }
 }
