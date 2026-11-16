@@ -82,6 +82,7 @@ class Rime :
     private var isNullInputType = true
     private var lastAsciiTipsText = ""
     private var pagingMode = false
+    private var cherryEnglishRawCandidate: String? = null
 
     init {
         if (lifecycle.currentState != RimeLifecycle.State.STOPPED) {
@@ -219,6 +220,12 @@ class Rime :
     }
 
     override suspend fun selectCandidate(idx: Int, global: Boolean): Boolean = withRimeContext {
+        val raw = cherryEnglishRawCandidate
+        if (idx == 0 && raw != null && getCurrentRimeSchema() == "cherry_english" && getRimeRawInput() == raw) {
+            clearRimeComposition()
+            emitResponse(CommitProto(raw))
+            return@withRimeContext true
+        }
         selectRimeCandidate(idx, global).also { emitResponse() }
     }
 
@@ -347,9 +354,17 @@ class Rime :
         if (response.composition.length <= 0 && lastAsciiTipsText != asciiTipsText(response.status)) {
             showAsciiSwitchTips(response.status)
         }
-        when (val candidates = response.candidates) {
-            is Candidates.Paged -> handleRimeMessage(7, arrayOf(candidates))
-            is Candidates.Bulk -> handleRimeMessage(9, arrayOf(candidates))
+        val candidates = response.candidates
+        val raw = if (response.status.schemaId == "cherry_english" && candidates.candidates.isEmpty()) {
+            getRimeRawInput().takeIf { it.isNotEmpty() }
+        } else {
+            null
+        }
+        cherryEnglishRawCandidate = raw
+        val fallback = raw?.let { arrayOf(CandidateProto(it, "", "")) }
+        when (candidates) {
+            is Candidates.Paged -> handleRimeMessage(7, arrayOf(if (fallback == null) candidates else Candidates.Paged(candidates = fallback)))
+            is Candidates.Bulk -> handleRimeMessage(9, arrayOf(if (fallback == null) candidates else Candidates.Bulk(total = 1, candidates = fallback)))
         }
         handleRimeMessage(8, arrayOf(response.status))
     }
