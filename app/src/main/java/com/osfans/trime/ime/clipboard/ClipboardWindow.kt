@@ -746,6 +746,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     override fun onDetached() {
+        clipboardLayout.dismissTabChooser()
         clipboardLayout.dismissSegments()
         deleteConfirmation?.dismiss()
         deleteConfirmation = null

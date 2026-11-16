@@ -7,10 +7,13 @@ package com.osfans.trime.ime.clipboard
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.viewpager2.widget.ViewPager2
@@ -31,7 +34,7 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
     val viewPager = view(::ViewPager2) {}
 
     val titleUi = ClipboardTitleUi(context, scope)
-    private var tabChooser: FrameLayout? = null
+    private var tabChooser: PopupWindow? = null
     private var settings: View? = null
     private var segments: View? = null
     internal val isShowingSegments get() = segments != null
@@ -51,10 +54,7 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
         })
     }
 
-    private fun dismissTabChooser() {
-        tabChooser?.let(::removeView)
-        tabChooser = null
-    }
+    internal fun dismissTabChooser() = tabChooser?.dismiss()
 
     internal fun showSegments(content: View) {
         dismissTabChooser()
@@ -128,7 +128,13 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
             })
         }
         overlay.addView(tabs, FrameLayout.LayoutParams(matchParent, wrapContent))
-        tabChooser = overlay
-        add(overlay, lParams { centerInParent() })
+        val title = titleUi.root
+        tabChooser = PopupWindow(overlay, width, height + title.height, true).apply {
+            inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            animationStyle = 0
+            setOnDismissListener { tabChooser = null }
+            showAsDropDown(title, 0, -title.height, Gravity.START)
+        }
     }
 }
