@@ -72,8 +72,8 @@ interface DatabaseDao {
     @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} ORDER BY pinned DESC, time DESC")
     fun allBeans(): PagingSource<Int, DatabaseBean>
 
-    @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} WHERE id IN (:ids)")
-    fun observeCollectionRecords(ids: List<Int>): Flow<List<DatabaseBean>>
+    @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME} ORDER BY pinned DESC, time DESC")
+    fun observeCollectionRecords(): Flow<List<DatabaseBean>>
 
     @Query("SELECT * FROM ${DatabaseBean.TABLE_NAME}")
     suspend fun clipboardRecords(): List<DatabaseBean>

@@ -18,6 +18,8 @@
     <string name="cherry_clipboard_number">数字</string>
     <string name="cherry_clipboard_link">链接</string>
     <string name="cherry_phrase_unfavorite">取消收藏</string>
+    <string name="cherry_phrase_send">发送</string>
+    <string name="cherry_phrase_undo">撤回</string>
     <string name="cherry_phrase_confirm">确认</string>
     <string name="cherry_clipboard_phrases">常用语</string>
     <string name="cherry_translation_hint">中文与日语互译</string>

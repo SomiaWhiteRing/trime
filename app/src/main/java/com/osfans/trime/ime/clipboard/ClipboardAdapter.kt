@@ -67,6 +67,14 @@ abstract class ClipboardAdapter(
     private var popupMenu: PopupMenu? = null
     private var expandedClipboardId: Int? = null
     private var expandedClipboardText = false
+    var sequencePosition = RecyclerView.NO_POSITION
+        set(value) {
+            val previous = field
+            if (value == previous) return
+            field = value
+            if (previous in 0 until itemCount) notifyItemChanged(previous)
+            if (value in 0 until itemCount) notifyItemChanged(value)
+        }
     var compact = false
         set(value) {
             if (field == value) return
@@ -97,7 +105,7 @@ abstract class ClipboardAdapter(
     ) {
         val bean = getItem(position) ?: return
         with(holder.ui) {
-            refreshColors(compact)
+            refreshColors(compact, position == sequencePosition)
             val content = bean.text.orEmpty()
             val preview = excerptText(content)
             setBean(preview, bean.pinned)

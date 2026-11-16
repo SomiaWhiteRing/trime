@@ -65,6 +65,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -107,6 +108,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     private val phraseFilter = MutableStateFlow(PhraseFilter.DEFAULT)
+    private var displayedPhrases = emptyList<DatabaseBean>()
+    private var phraseSequenceIndex = 0
+    private var undoStagedPhrase: (() -> Boolean)? = null
+    private lateinit var phraseSendButton: View
+    private lateinit var phraseUndoButton: View
     private val recentPhrasePrefs by lazy { service.getSharedPreferences("cherry_phrase_recents", Context.MODE_PRIVATE) }
     private val recentPhraseIds by lazy {
         MutableStateFlow(recentPhrasePrefs.getString("ids", "").orEmpty().split(',').mapNotNull(String::toIntOrNull))
@@ -234,10 +240,16 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         object : ClipboardAdapter(scope, usesCherryLayout) {
             override fun onPaste(bean: DatabaseBean) {
                 val text = bean.text ?: return
+                if (usesCherryLayout && recommendationSendMode == CherrySendMode.SEQUENTIAL) {
+                    val index = displayedPhrases.indexOfFirst { it.id == bean.id }
+                    if (index < 0) return
+                    undoStagedPhrase = service.stageRecommendation(text) ?: return
+                    phraseSequenceIndex = index
+                    updatePhraseSequence()
+                    return
+                }
                 if (service.commitText(text) && usesCherryLayout) {
-                    val ids = (listOf(bean.id) + recentPhraseIds.value.filterNot { it == bean.id }).take(300)
-                    recentPhraseIds.value = ids
-                    recentPhrasePrefs.edit().putString("ids", ids.joinToString(",")).apply()
+                    rememberPhrase(bean)
                     if (recommendationSendMode == CherrySendMode.AUTOMATIC) {
                         service.sendRecommendationInCurrentEditor()
                     }
@@ -733,6 +745,40 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
+    private fun rememberPhrase(bean: DatabaseBean) {
+        val ids = (listOf(bean.id) + recentPhraseIds.value.filterNot { it == bean.id }).take(300)
+        if (ids != recentPhraseIds.value) {
+            recentPhraseIds.value = ids
+            recentPhrasePrefs.edit().putString("ids", ids.joinToString(",")).apply()
+        }
+    }
+
+    private fun updatePhraseSequence() {
+        val visible = recommendationSendMode == CherrySendMode.SEQUENTIAL && phraseSequenceIndex in displayedPhrases.indices
+        collectionBeansAdapter.sequencePosition = if (visible) phraseSequenceIndex else -1
+        if (!::phraseSendButton.isInitialized) return
+        phraseSendButton.visibility = if (visible) View.VISIBLE else View.GONE
+        phraseUndoButton.visibility = if (visible && undoStagedPhrase != null) View.VISIBLE else View.GONE
+        val asset = if (undoStagedPhrase == null) "clipboard-recommend-send-plane.png" else "clipboard-recommend-staged-plane.png"
+        phraseSendButton.background = scope.drawable(asset)
+    }
+
+    private fun sendNextPhrase() {
+        val bean = displayedPhrases.getOrNull(phraseSequenceIndex) ?: return
+        val text = bean.text ?: return
+        if (undoStagedPhrase == null) undoStagedPhrase = service.stageRecommendation(text) ?: return
+        if (!service.sendRecommendationInCurrentEditor()) {
+            updatePhraseSequence()
+            return
+        }
+        undoStagedPhrase = null
+        val next = displayedPhrases.getOrNull(phraseSequenceIndex + 1) ?: displayedPhrases.first()
+        rememberPhrase(bean)
+        phraseSequenceIndex = displayedPhrases.indexOfFirst { it.id == next.id }
+        updatePhraseSequence()
+        collectionPage.recyclerView.smoothScrollToPosition(phraseSequenceIndex)
+    }
+
     private val collectionPage: ClipboardPageUi by lazy {
         ClipboardPageUi(context, usesCherryLayout, phrase = usesCherryLayout).apply {
             if (usesCherryLayout) root.setBackgroundColor(0xFF363636.toInt())
@@ -756,6 +802,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     }
                 }
                 fun select(filter: PhraseFilter) {
+                    if (phraseFilter.value != filter) {
+                        phraseSequenceIndex = 0
+                        displayedPhrases = emptyList()
+                        undoStagedPhrase = null
+                    }
                     phraseFilter.value = filter
                     labels.forEach { (item, label) ->
                         val state = if (item == filter) "active" else "idle"
@@ -771,9 +822,40 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     LinearLayout(context).apply {
                         orientation = LinearLayout.VERTICAL
                         addView(filters, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(34)))
-                        addView(recyclerView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+                        addView(FrameLayout(context).apply {
+                            addView(recyclerView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                            phraseSendButton = TextView(context).apply {
+                                contentDescription = context.getText(R.string.cherry_phrase_send)
+                                gravity = Gravity.CENTER
+                                if (scope.drawable("clipboard-recommend-send-plane.png") == null) setText(R.string.cherry_phrase_send)
+                                setOnClickListener { sendNextPhrase() }
+                            }
+                            phraseUndoButton = TextView(context).apply {
+                                contentDescription = context.getText(R.string.cherry_phrase_undo)
+                                gravity = Gravity.CENTER
+                                background = scope.drawable("clipboard-recommend-revoke.png")
+                                if (background == null) setText(R.string.cherry_phrase_undo)
+                                setOnClickListener {
+                                    if (undoStagedPhrase?.invoke() == true) undoStagedPhrase = null
+                                    updatePhraseSequence()
+                                }
+                            }
+                            addView(phraseSendButton, FrameLayout.LayoutParams(context.dp(55), context.dp(40), Gravity.END or Gravity.BOTTOM).apply {
+                                bottomMargin = context.dp(29)
+                            })
+                            addView(phraseUndoButton, FrameLayout.LayoutParams(context.dp(44), context.dp(40), Gravity.END or Gravity.BOTTOM).apply {
+                                bottomMargin = context.dp(29)
+                                marginEnd = context.dp(55)
+                            })
+                            updatePhraseSequence()
+                        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
                         addView(
-                            createPhraseSendFooter(),
+                            createPhraseSendFooter {
+                                phraseSequenceIndex = 0
+                                undoStagedPhrase = null
+                                updatePhraseSequence()
+                                recyclerView.scrollToPosition(0)
+                            },
                             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(29)),
                         )
                     },
@@ -1008,21 +1090,22 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     private fun startCollectionPaging() {
         collectionBeansSubmitJob = service.lifecycleScope.launch {
             val pages = if (usesCherryLayout) {
-                phraseFilter.flatMapLatest { filter ->
-                    when (filter) {
-                        PhraseFilter.DEFAULT -> collectionBeansPager.flow
-                        PhraseFilter.FAVORITES -> collectionBeansPager.flow.map { page -> page.filter { it.pinned } }
-                        PhraseFilter.RECENT -> recentPhraseIds.flatMapLatest { ids ->
-                            CollectionHelper.observeRecords(ids).map { records ->
-                                val byId = records.associateBy { it.id }
-                                PagingData.from(ids.mapNotNull(byId::get))
-                            }
+                combine(phraseFilter, recentPhraseIds, CollectionHelper.observeRecords()) { filter, ids, records ->
+                    val currentId = displayedPhrases.getOrNull(phraseSequenceIndex)?.id
+                    displayedPhrases = when (filter) {
+                        PhraseFilter.DEFAULT -> records
+                        PhraseFilter.FAVORITES -> records.filter { it.pinned }
+                        PhraseFilter.RECENT -> {
+                            val byId = records.associateBy { it.id }
+                            ids.mapNotNull(byId::get)
                         }
                     }
+                    phraseSequenceIndex = displayedPhrases.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
+                    updatePhraseSequence()
+                    PagingData.from(displayedPhrases)
                 }
             } else {
                 collectionBeansPager.flow
