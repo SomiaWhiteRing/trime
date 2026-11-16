@@ -135,6 +135,13 @@ sidebar.save(assets/'cherry-number-sidebar.png')
 number.save(assets/'cherry-number-panel.png')
 
 symbol=Image.open(args.symbol_reference).convert('RGB').crop((0,1535,1116,2360))
+unlocked = symbol.crop((20, 675, 242, 796)).convert("RGBA")
+erase_labels(unlocked, (88, 16, 149, 86), 84)
+sheet, index = config["STYLE151"]["nm_img"].split(",")
+icon = sprite(sheet, int(index)).convert("RGBA")
+icon = icon.resize((91, 63), Image.Resampling.LANCZOS)
+unlocked.paste((179, 179, 179, 255), (73, 19, 164, 82), icon.getchannel("A"))
+unlocked.save(assets / "cherry-symbol-lock-unlocked.png")
 sidebar=symbol.crop((16,13,185,622))
 # Use the normal first row as a repeating list background, keeping the frame.
 row=sidebar.crop((0,8,169,128))

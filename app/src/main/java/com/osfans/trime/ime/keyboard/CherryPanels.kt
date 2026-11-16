@@ -236,6 +236,7 @@ internal class CherrySymbolsWindow(
             }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         }
         lock.isSelected = locked
+        lock.background = if (locked) null else scope.drawable("cherry-symbol-lock-unlocked.png")
         previous.isEnabled = page > 0
         next.isEnabled = (page + 1) * 4 < rows.size
     }
