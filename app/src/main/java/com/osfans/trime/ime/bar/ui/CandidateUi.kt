@@ -9,6 +9,7 @@ import android.view.View
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
+import com.osfans.trime.data.theme.model.ToolBar
 import splitties.dimensions.dp
 import splitties.views.dsl.constraintlayout.before
 import splitties.views.dsl.constraintlayout.centerVertically
@@ -26,16 +27,22 @@ class CandidateUi(
 ) : Ui {
     private val theme: Theme get() = scope.theme
 
+    private val cherryArrow = "cherry_edit" in theme.presetKeyboards && scope.drawable("candidate-expand.png") != null
+
     val unrollButton =
-        ToolButton(ctx, R.drawable.ic_baseline_expand_more_24, scope).apply {
-            visibility = View.INVISIBLE
-        }
+        (if (cherryArrow) {
+            ToolButton(ctx, ToolBar.Button(
+                foreground = ToolBar.Button.Foreground(style = "candidate-expand.png", padding = 0),
+            ), scope)
+        } else {
+            ToolButton(ctx, R.drawable.ic_baseline_expand_more_24, scope)
+        }).apply { visibility = View.INVISIBLE }
 
     override val root =
         ctx.constraintLayout {
             add(
                 unrollButton,
-                lParams(dp(40)) {
+                lParams(dp(if (cherryArrow) 60 else 40)) {
                     centerVertically()
                     endOfParent()
                 },

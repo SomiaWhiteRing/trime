@@ -5,6 +5,7 @@ import struct
 import zipfile
 from pathlib import Path
 
+from PIL import Image
 import marisa_trie
 import yaml
 
@@ -61,6 +62,8 @@ translator:
   enable_completion: true
   enable_sentence: false
   enable_user_dict: true
+  comment_format:
+    - xform/^.*$//
 punctuator:
   import_preset: default
 key_binder:
@@ -81,6 +84,11 @@ key_binder:
 
 def configure_keyboard(theme_path):
     theme = yaml.safe_load(theme_path.read_text(encoding="utf-8"))
+    palette = theme["preset_color_schemes"]["baidu_cherry"]
+    palette["hilited_candidate_back_color"] = "0x00000000"
+    palette["hilited_candidate_text_color"] = "0xaa304e"
+    theme["style"]["candidate_padding"] = 8
+    theme["style"]["candidate_text_size"] = 19
     presets = theme["preset_keys"]
     presets["CherryAsciiSwitch"] = {"label": "中", "send": "FUNCTION", "command": "cherry_language"}
     presets["CherryReturnChinese"] = {"label": "En", "send": "FUNCTION", "command": "cherry_language"}
@@ -107,10 +115,22 @@ def configure_keyboard(theme_path):
     theme_path.write_text(yaml.safe_dump(theme, allow_unicode=True, sort_keys=False), encoding="utf-8")
 
 
+def import_candidate_arrow(reference, directory):
+    source = Image.open(reference).convert("RGBA")
+    asset = Image.new("RGBA", (180, 123))
+    asset.paste(source.crop((1000, 1570, 1052, 1620)), (64, 35))
+    assets = directory / "backgrounds" / "baidu_cherry"
+    assets.mkdir(parents=True, exist_ok=True)
+    asset.save(assets / "candidate-expand.png")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Import the English word trie from a local Baidu APK.")
     parser.add_argument("apk", type=Path)
     parser.add_argument("profile", type=Path)
+    parser.add_argument("--candidate-reference", type=Path, help="CHERRY portrait capture with a visible candidate strip")
     args = parser.parse_args()
     entries, offsets, records, words = write_profile(args.apk, args.profile)
+    if args.candidate_reference:
+        import_candidate_arrow(args.candidate_reference, args.profile)
     print(f"{entries} entries, {offsets} offsets, {records} record bytes, {words} standalone English words")
