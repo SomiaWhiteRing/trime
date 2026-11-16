@@ -6,6 +6,7 @@
 package com.osfans.trime.ime.clipboard
 
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.view.View
 import com.osfans.trime.R
@@ -32,6 +33,7 @@ import splitties.views.setPaddingDp
 class ClipboardBeanUi(
     override val ctx: Context,
     private val scope: ThemeScope,
+    private val cherry: Boolean,
 ) : Ui {
     private val theme: Theme get() = scope.theme
 
@@ -39,9 +41,9 @@ class ClipboardBeanUi(
         textView {
             minLines = 1
             maxLines = 4
-            textSize = 14f
+            textSize = if (cherry) 12f else 14f
             typeface = theme.fonts.key
-            setPaddingDp(8, 4, 8, 4)
+            if (cherry) setPaddingDp(8, 8, 8, 8) else setPaddingDp(8, 4, 8, 4)
             ellipsize = TextUtils.TruncateAt.END
             setTextColor(scope.colors.keyTextColor)
         }
@@ -75,14 +77,7 @@ class ClipboardBeanUi(
     override val root =
         GestureFrame(ctx).apply {
             isClickable = true
-            minimumHeight = dp(30)
-            background =
-                scope.decorDrawable(
-                    "key_back_color",
-                    "key_border_color",
-                    dp(theme.style.keyBorder),
-                    dp(theme.style.roundCorner),
-                )
+            minimumHeight = dp(if (cherry) 39 else 30)
             add(layout, lParams(matchParent, matchParent))
             layoutParams = lParams(matchParent, wrapContent)
         }
@@ -97,14 +92,21 @@ class ClipboardBeanUi(
 
     /** Restyles the row after a scheme switch. */
     fun refreshColors() {
-        textView.setTextColor(scope.colors.keyTextColor)
+        textView.setTextColor(if (cherry) 0xFFB3B3B3.toInt() else scope.colors.keyTextColor)
         pin.drawable?.setTint(scope.colors.keySymbolColor)
-        root.background =
+        root.background = if (cherry) {
+            GradientDrawable().apply {
+                setColor(0xFF434343.toInt())
+                setStroke(ctx.dp(1f / 3f).toInt().coerceAtLeast(1), 0xFF6E6E6E.toInt())
+                cornerRadius = ctx.dp(4f)
+            }
+        } else {
             scope.decorDrawable(
                 "key_back_color",
                 "key_border_color",
                 ctx.dp(theme.style.keyBorder),
                 ctx.dp(theme.style.roundCorner),
             )
+        }
     }
 }

@@ -114,7 +114,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private var collectionBeansSubmitJob: Job? = null
 
     private val clipboardBeansAdapter by lazy {
-        object : ClipboardAdapter(scope) {
+        object : ClipboardAdapter(scope, usesCherryLayout) {
             override fun onPaste(bean: DatabaseBean) {
                 val text = bean.text ?: return
                 val committed = service.commitText(text)
@@ -163,7 +163,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     private val collectionBeansAdapter by lazy {
-        object : ClipboardAdapter(scope) {
+        object : ClipboardAdapter(scope, usesCherryLayout) {
             override fun onPaste(bean: DatabaseBean) {
                 val text = bean.text ?: return
                 service.commitText(text)
@@ -195,7 +195,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     private val clipboardPage by lazy {
-        ClipboardPageUi(context).apply {
+        ClipboardPageUi(context, usesCherryLayout).apply {
             recyclerView.apply {
                 layoutManager = verticalLayoutManager()
                 adapter = clipboardBeansAdapter
@@ -237,7 +237,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         orientation = LinearLayout.VERTICAL
                         addView(
                             categories,
-                            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(38)),
+                            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, context.dp(30)),
                         )
                         addView(
                             recyclerView,
@@ -378,7 +378,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     private val collectionPage by lazy {
-        ClipboardPageUi(context).apply {
+        ClipboardPageUi(context, usesCherryLayout).apply {
+            if (usesCherryLayout) root.setBackgroundColor(0xFF353535.toInt())
             recyclerView.apply {
                 layoutManager = verticalLayoutManager()
                 adapter = collectionBeansAdapter

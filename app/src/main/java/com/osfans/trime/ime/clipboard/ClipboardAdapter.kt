@@ -21,6 +21,7 @@ import kotlin.math.min
 
 abstract class ClipboardAdapter(
     private val scope: ThemeScope,
+    private val cherry: Boolean,
 ) : PagingDataAdapter<DatabaseBean, ClipboardAdapter.ViewHolder>(diffCallback) {
     companion object {
         private val diffCallback =
@@ -69,7 +70,7 @@ abstract class ClipboardAdapter(
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int,
-    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope))
+    ): ViewHolder = ViewHolder(ClipboardBeanUi(parent.context, scope, cherry))
 
     override fun onBindViewHolder(
         holder: ViewHolder,

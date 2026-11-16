@@ -16,9 +16,10 @@ import splitties.views.dsl.core.matchParent
 import splitties.views.dsl.core.view
 import splitties.views.dsl.recyclerview.recyclerView
 
-class ClipboardPageUi(override val ctx: Context) : Ui {
+class ClipboardPageUi(override val ctx: Context, cherry: Boolean = false) : Ui {
     val recyclerView = recyclerView {
-        addItemDecoration(SpacesItemDecoration(dp(4)))
+        if (cherry) setPadding(dp(8), dp(2), dp(8), dp(2))
+        addItemDecoration(SpacesItemDecoration(if (cherry) dp(8f / 3f).toInt() else dp(4), if (cherry) 0 else dp(4)))
     }
 
     override val root = view(::FrameLayout) {
