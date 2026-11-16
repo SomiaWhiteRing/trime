@@ -14,7 +14,10 @@ import android.os.Build
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.text.style.ReplacementSpan
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
@@ -67,6 +70,7 @@ import org.kodein.di.instance
 import splitties.dimensions.dp
 import splitties.views.recyclerview.verticalLayoutManager
 import java.util.Calendar
+import kotlin.math.roundToInt
 
 class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.BarBoardWindow(di) {
 
@@ -731,6 +735,25 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             tabUi.root.minimumWidth = context.dp(if (position == 2) 42 else 56)
             tabUi.root.minimumHeight = context.dp(35)
             val isVivo = Build.BRAND.equals("vivo", ignoreCase = true)
+            if (isVivo && tabUi.label.text.endsWith('板')) {
+                val title = SpannableString(tabUi.label.text)
+                val lastGlyphOffset = context.dp(1f / 3) / 0.975f
+                title.setSpan(
+                    object : ReplacementSpan() {
+                        override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int =
+                            paint.measureText(text, start, end).roundToInt()
+
+                        override fun draw(
+                            canvas: Canvas, text: CharSequence, start: Int, end: Int,
+                            x: Float, top: Int, y: Int, bottom: Int, paint: Paint,
+                        ) {
+                            canvas.drawText(text, start, end, x + lastGlyphOffset, y.toFloat(), paint)
+                        }
+                    },
+                    title.length - 1, title.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+                tabUi.label.text = title
+            }
             tabUi.activeStyle = { active ->
                 val bold = active && !isVivo
                 tabUi.label.setTypeface(theme.fonts.candidate, if (bold) Typeface.BOLD else Typeface.NORMAL)
@@ -741,7 +764,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                     1 -> context.dp(1f / 6)
                     else -> 0f
                 }
-                val baselineOffset = if (isVivo) -1f / 24 else if (bold) 2f / 3 else 0.625f
+                val baselineOffset = if (isVivo) -0.375f else if (bold) 2f / 3 else 0.625f
                 tabUi.label.translationY = context.dp(baselineOffset)
                 tabUi.label.setTextColor(when {
                     !active -> 0xFFB3B3B3.toInt()
