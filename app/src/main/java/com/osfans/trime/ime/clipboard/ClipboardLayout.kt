@@ -8,6 +8,7 @@ package com.osfans.trime.ime.clipboard
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -30,7 +31,7 @@ import splitties.views.dsl.core.wrapContent
 import kotlin.math.roundToInt
 
 @SuppressLint("ViewConstructor")
-class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(context) {
+class ClipboardLayout(context: Context, private val scope: ThemeScope) : ConstraintLayout(context) {
 
     val viewPager = view(::ViewPager2) {}
 
@@ -111,7 +112,7 @@ class ClipboardLayout(context: Context, scope: ThemeScope) : ConstraintLayout(co
                 setText(label)
                 textSize = 14f
                 gravity = Gravity.CENTER
-                paint.isFakeBoldText = selected
+                setTypeface(scope.theme.fonts.candidate, if (selected) Typeface.BOLD else Typeface.NORMAL)
                 val accent = 0xFF9D1E42.toInt()
                 setTextColor(if (selected) accent else 0xFFB3B3B3.toInt())
                 setPadding(dp(12), dp(4), dp(12), dp(4))
