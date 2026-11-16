@@ -163,13 +163,10 @@ internal class CherrySymbolsWindow(
         symbolScroll = object : ScrollView(context) {
             override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
                 val viewport = MeasureSpec.getSize(heightMeasureSpec)
-                val rowHeight = viewport / 4
-                // CHERRY can scroll five more reference pixels after a full final page.
-                val tail = if (grid.childCount > 4) (viewport * 5f / 640).roundToInt() else 0
+                val rowHeight = (viewport / 4f).roundToInt()
                 for (i in 0 until grid.childCount) {
                     grid.getChildAt(i).layoutParams.height = rowHeight
                 }
-                grid.setPadding(0, 0, 0, tail)
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec)
             }
 
@@ -183,7 +180,7 @@ internal class CherrySymbolsWindow(
             addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
             setOnScrollChangeListener { _, _, _, _, _ -> updateFooter() }
         }
-        cell(symbolScroll, 199, 9, 905, 640)
+        cell(symbolScroll, 199, 9, 905, 644)
         lock = hitTarget(context, "锁定") {
             locked = !locked
             preferences.edit().putBoolean("locked", locked).apply()
@@ -192,12 +189,12 @@ internal class CherrySymbolsWindow(
         updateLock()
         previous = pagingKey("上一页") {
             val scroll = symbolScroll
-            val target = if (scroll.scrollY <= scroll.height + grid.paddingBottom) 0 else scroll.scrollY - scroll.height
+            val target = if (scroll.scrollY <= scroll.height) 0 else scroll.scrollY - pageDistance()
             scroll.smoothScrollTo(0, target)
         }
         next = pagingKey("下一页") {
             val scroll = symbolScroll
-            scroll.smoothScrollTo(0, minOf(scroll.scrollY + scroll.height, grid.height - scroll.height))
+            scroll.smoothScrollTo(0, minOf(scroll.scrollY + pageDistance(), grid.height - scroll.height))
         }
         cell(lock, 20, 675, 222, 121)
         cell(previous, 243, 675, 203, 121)
@@ -214,6 +211,12 @@ internal class CherrySymbolsWindow(
             background = footerBackground("return")
         }, 873, 675, 226, 121)
         render()
+    }
+
+    private fun pageDistance(): Int {
+        // CHERRY uses a slightly shorter scroll step in the recent-symbol category.
+        val referenceDistance = if (category == 0) 639 else 642
+        return (symbolScroll.height * (referenceDistance / 644f)).roundToInt()
     }
 
     private fun recent(): List<String> {
