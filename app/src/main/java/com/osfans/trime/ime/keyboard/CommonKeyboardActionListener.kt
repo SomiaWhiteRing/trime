@@ -38,7 +38,9 @@ import com.osfans.trime.util.buildIntentFromArgument
 import com.osfans.trime.util.customFormatDateTime
 import com.osfans.trime.util.isAsciiPrintable
 import com.osfans.trime.util.toast
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.kodein.di.DI
 import org.kodein.di.DIAware
 import org.kodein.di.instance
@@ -244,7 +246,13 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                     val current = selectedSchemaId()
                     val chinese = cherryPreferences.getString("chinese_schema", null)
                         ?.takeIf { it.isNotBlank() } ?: "luna_pinyin"
-                    commitComposition()
+                    val rawInput = if (prediction == null && !returnToChinese) getRawInput() else ""
+                    if (rawInput.isEmpty()) {
+                        commitComposition()
+                    } else {
+                        withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
+                        clearComposition()
+                    }
                     when (prediction) {
                         true -> {
                             if (selectSchema("cherry_english")) {
