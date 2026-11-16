@@ -41,11 +41,27 @@ parser.add_argument("--clipboard-send-revoke", type=Path,
                     help="1116 x 702 CHERRY recommendation body with the staged Undo and Send controls")
 parser.add_argument("--cherry-alphabet-footers", nargs=2, metavar=("CHINESE", "ENGLISH"),
                     help="1116 x 186 portrait alphabet footer captures from y=2270")
+parser.add_argument("--cherry-alphabet-top", type=Path,
+                    help="1116 x 136 idle CHERRY toolbar and first thirteen panel rows from y=1631")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.cherry_alphabet_top:
+    reference = Image.open(args.cherry_alphabet_top).convert("RGB")
+    if reference.size != (1116, 136):
+        raise ValueError("Expected a 1116 x 136 CHERRY toolbar and panel crop")
+    for name, left, right in (
+        ("menu", 0, 177), ("script", 177, 366), ("translate", 366, 558),
+        ("clipboard", 558, 750), ("edit", 750, 939), ("hide", 939, 1116),
+    ):
+        reference.crop((left, 0, right, 123)).save(assets / f"tool-{name}.png")
+    background = Image.new("RGB", (1, 702), (13, 13, 13))
+    background.paste(reference.crop((0, 123, 1, 136)), (0, 0))
+    background.save(assets / "cherry-alphabet-background.png")
+
 
 if args.reference_apk:
     with zipfile.ZipFile(args.reference_apk) as apk:

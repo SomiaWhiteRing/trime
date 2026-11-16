@@ -18,6 +18,7 @@ import com.osfans.trime.core.RimeMessage
 import com.osfans.trime.core.SchemaItem
 import com.osfans.trime.daemon.RimeSession
 import com.osfans.trime.data.theme.Theme
+import com.osfans.trime.data.theme.ThemeScope
 import com.osfans.trime.data.theme.model.KeyActionToken
 import com.osfans.trime.data.theme.model.TextKeyboard
 import com.osfans.trime.ime.broadcast.EnterKeyDisplayDelegate
@@ -48,6 +49,7 @@ class KeyboardWindow(di: DI) :
     InputBroadcastReceiver {
     private val service: TrimeInputMethodService by instance()
     private val theme: Theme by instance()
+    private val scope: ThemeScope by instance()
     private val rime: RimeSession by instance()
     private val commonKeyboardActionListener: CommonKeyboardActionListener by instance()
     private val popup: PopupDelegate by instance()
@@ -112,6 +114,7 @@ class KeyboardWindow(di: DI) :
 
     override fun onCreateView(): View {
         keyboardView = context.frameLayout(R.id.keyboard_view)
+        refreshColors()
         keyboardView.addOnLayoutChangeListener(onKeyboardViewLayoutChangeListener)
         attachKeyboard(evalKeyboard(".default"))
         return keyboardView
@@ -330,6 +333,12 @@ class KeyboardWindow(di: DI) :
 
     /** Repaints the keyboard after a color-scheme switch; keys re-resolve their colors. */
     override fun refreshColors() {
+        keyboardView.background =
+            if ("cherry_edit" in theme.presetKeyboards && !context.resources.configuration.isLandscape()) {
+                scope.drawable("cherry-alphabet-background.png")
+            } else {
+                null
+            }
         currentKeyboardView?.invalidateAllKeys()
     }
 
