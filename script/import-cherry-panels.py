@@ -70,7 +70,47 @@ def sprite(sheet,index):
     im=Image.open(io.BytesIO(skin.read(f'1080/res/{sheet}.png')))
     return im.crop((x,y,x+w,y+h))
 
+def save_keycap(style, width, foreground):
+    properties = config[f"STYLE{style}"]
+    for state, field in (("normal", "nm_img"), ("pressed", "hl_img")):
+        sheet, index = properties[field].split(",")
+        tiles = resource(f"res/{sheet}.til")
+        tile = tiles[f"IMG{index}"]
+        source_x, _, source_width, _ = map(int, tile["source_rect"].split(","))
+        inner_x, _, inner_width, _ = map(int, tile["inner_rect"].split(","))
+        left = inner_x - source_x
+        right = left + inner_width
+        original = sprite(sheet, int(index)).convert("RGBA")
+        if width != source_width:
+            middle_width = width - (source_width - inner_width)
+            cap = Image.new("RGBA", (width, original.height))
+            cap.paste(original.crop((0, 0, left, original.height)), (0, 0))
+            middle = original.crop((left, 0, right, original.height))
+            cap.paste(middle.resize((middle_width, original.height), Image.Resampling.BILINEAR), (left, 0))
+            cap.paste(original.crop((right, 0, source_width, original.height)), (left + middle_width, 0))
+        else:
+            cap = original
+        if foreground is not None:
+            sheet, index = config[f"STYLE{foreground}"][field].split(",")
+            glyph = sprite(sheet, int(index)).convert("RGBA")
+            cap = cap.copy()
+            cap.alpha_composite(glyph, ((width - glyph.width) // 2, (cap.height - glyph.height) // 2 - 9))
+        rgb = cap.convert("RGB").point([value * 7 // 10 for value in range(256)] * 3)
+        rgb.putalpha(cap.getchannel("A"))
+        rgb.save(assets / f"cherry-keycap-{style}-{width}-{state}.png")
+
+
 config=resource('port/res/default.css')
+keycaps = {
+    (item["back_style"], int(item["view_rect"].split(",")[2]), "253" if item["center"] == "F38" else None)
+    for layout in ("py_26", "en_26")
+    for name, item in resource(f"port/{layout}.ini").items()
+    if re.fullmatch(r"KEY\d+", name)
+}
+for style_id, key_width, foreground in sorted(keycaps):
+    save_keycap(style_id, key_width, foreground)
+Image.new("RGB", (1, 1), (13, 13, 13)).save(assets / "cherry-keys-background.png")
+
 for filename, style in (
     ("cherry-shift-off", 105), ("cherry-shift-on", 131), ("cherry-shift-marker", 250),
     ("cherry-language-chinese", 148), ("cherry-language-english", 108),
@@ -178,6 +218,7 @@ symbol.save(assets/'cherry-symbol-panel.png')
 theme_path=theme_dir/'baidu_cherry.trime.yaml'
 theme=yaml.safe_load(theme_path.read_text(encoding='utf-8'))
 theme['style']['keyboard_padding_bottom'] = 8
+theme['preset_color_schemes']['baidu_cherry']['keyboard_back_color'] = 'cherry-keys-background.png'
 keys=theme['preset_keys']
 keys['CherryQuickSymbols']={'label':'符','send':'FUNCTION','command':'liquid_keyboard','option':'emoji'}
 keys['CherryDeleteWord']={'label':'','send':'Control+BackSpace'}
@@ -207,6 +248,9 @@ def populate(layout, builder, english=False):
             if x>end: ordered.append({'width': (x-end)*100/1080})
             existing=builder.get(action(item['center']),{})
             key=dict(existing,click=action(item['center']),width=w*100/1080)
+            style_id = item["back_style"]
+            key["key_back_color"] = f"cherry-keycap-{style_id}-{w}-normal.png"
+            key["hilited_key_back_color"] = f"cherry-keycap-{style_id}-{w}-pressed.png"
             for target in ('long_click','swipe_up','swipe_down','swipe_left','swipe_right'):
                 key.pop(target,None)
             for source,target in [('up','swipe_up'),('down','swipe_down'),('left','swipe_left'),('right','swipe_right'),('hold','long_click')]:
@@ -225,7 +269,8 @@ def populate(layout, builder, english=False):
                     key['label']=item['center'].upper()
             ordered.append(key)
             end=x+w
-        if end<1080: ordered[-1]['width']+=(1080-end)*100/1080
+        if end < 1079:
+            ordered.append({'width': (1080 - end) * 100 / 1080})
         rows[y]=ordered
     return [k for row in rows.values() for k in row]
 
