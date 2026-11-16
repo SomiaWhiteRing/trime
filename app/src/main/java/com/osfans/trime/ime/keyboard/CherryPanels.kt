@@ -25,8 +25,6 @@ import com.osfans.trime.ime.broadcast.EnterKeyDisplayDelegate
 import com.osfans.trime.ime.core.TrimeInputMethodService
 import com.osfans.trime.ime.window.BoardWindow
 import com.osfans.trime.ime.window.BoardWindowManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.kodein.di.DI
 import org.kodein.di.instance
@@ -187,17 +185,7 @@ internal class CherrySymbolsWindow(
                 actions.listener.onAction(scope.theme.resolveAction("CherryDeleteWord"))
             }
         }, 662, 675, 210, 121)
-        cell(hitTarget(context, "返回") {
-            service.postRimeJob {
-                val rawInput = getRawInput()
-                if (rawInput.isEmpty()) {
-                    withContext(Dispatchers.Main.immediate) { onReturn() }
-                } else {
-                    withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
-                    clearComposition()
-                }
-            }
-        }, 873, 675, 226, 121)
+        cell(hitTarget(context, "返回", onReturn), 873, 675, 226, 121)
         render()
     }
 
