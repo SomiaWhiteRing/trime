@@ -144,13 +144,38 @@ def import_candidate_arrow(reference, directory):
     asset.save(assets / "candidate-expand.png")
 
 
+def import_candidate_footer(reference, directory):
+    source = Image.open(reference).convert("RGB")
+    if source.size != (1116, 825):
+        raise ValueError("Expected the expanded CHERRY keyboard crop at 1116 x 825")
+    footer = source.crop((0, 666, 1116, 825))
+    assets = directory / "backgrounds" / "baidu_cherry"
+    assets.mkdir(parents=True, exist_ok=True)
+    for up in (False, True):
+        for down in (False, True):
+            variant = footer.copy()
+            for left, right, factor in ((172, 230, 3.4 if up else 1), (516, 576, 1 if down else 0.29)):
+                if factor == 1:
+                    continue
+                for y in range(42, 79):
+                    base = footer.getpixel((left - 3, y))[0]
+                    for x in range(left, right):
+                        value = footer.getpixel((x, y))[0]
+                        value = min(179, round(base + max(0, value - base) * factor))
+                        variant.putpixel((x, y), (value, value, value))
+            variant.save(assets / f"candidate-footer-{int(up)}{int(down)}.png")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Import the English word trie from a local Baidu APK.")
     parser.add_argument("apk", type=Path)
     parser.add_argument("profile", type=Path)
     parser.add_argument("--candidate-reference", type=Path, help="CHERRY portrait capture with a visible candidate strip")
+    parser.add_argument("--expanded-reference", type=Path, help="1116 x 825 crop of the expanded CHERRY keyboard on its first page")
     args = parser.parse_args()
     entries, offsets, records, words = write_profile(args.apk, args.profile)
     if args.candidate_reference:
         import_candidate_arrow(args.candidate_reference, args.profile)
+    if args.expanded_reference:
+        import_candidate_footer(args.expanded_reference, args.profile)
     print(f"{entries} entries, {offsets} offsets, {records} record bytes, {words} English candidate mappings")

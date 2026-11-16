@@ -226,6 +226,10 @@ class InputBarDelegate(override val di: DI) :
         candidateUi.unrollButton.visibility = if (enabled) View.VISIBLE else View.INVISIBLE
     }
 
+    internal fun showCherryCandidateBoard(expanded: Boolean) {
+        view.visibility = if (expanded || hideQuickBar) View.GONE else View.VISIBLE
+    }
+
     override fun onCandidateListUpdate(data: Candidates.Bulk) {
         barStateMachine.push(
             QuickBarStateMachine.TransitionEvent.CandidatesUpdated,

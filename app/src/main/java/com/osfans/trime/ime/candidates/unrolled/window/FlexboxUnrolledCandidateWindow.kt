@@ -79,5 +79,8 @@ class FlexboxUnrolledCandidateWindow(di: DI) : BaseUnrolledCandidateWindow(di) {
                 addItemDecoration(FlexboxHorizontalDecoration(separatorDrawable))
             }
         }
+        if (usesCherryLayout) {
+            installCherryFooter(layoutManager as GridLayoutManager, ::returnToKeyboard)
+        }
     }
 }

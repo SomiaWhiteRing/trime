@@ -145,6 +145,7 @@ class InputView(
         }
 
     private var lastAppearanceState = Triple(false, false, false)
+    private var cherryCandidateBoard = false
 
     private fun broadcastKeyAppearanceUpdate() {
         val composing = rime.run { statusCached.isComposing }
@@ -255,7 +256,7 @@ class InputView(
             service.lifecycleScope.launch {
                 keyboardWindow.currentKeyboardHeight.collect {
                     windowManager.view.updateLayoutParams {
-                        height = it
+                        height = it + if (cherryCandidateBoard) context.dp(inputBar.themedHeight) else 0
                     }
                 }
             }
@@ -342,6 +343,15 @@ class InputView(
 
     fun updateEnterKeyLabel(info: EditorInfo) {
         enterKeyDisplay.updateLabelOnEditorInfo(info)
+    }
+
+    internal fun showCherryCandidateBoard(expanded: Boolean) {
+        cherryCandidateBoard = expanded
+        inputBar.showCherryCandidateBoard(expanded)
+        val keyboardHeight = keyboardWindow.currentKeyboardHeight.replayCache.last()
+        windowManager.view.updateLayoutParams {
+            height = keyboardHeight + if (expanded) context.dp(inputBar.themedHeight) else 0
+        }
     }
 
     override fun handleRimeMessage(it: RimeMessage<*>) {

@@ -145,6 +145,7 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
 
     override fun onAttached() {
         lifecycleCoroutineScope = candidateLayout.findViewTreeLifecycleOwner()!!.lifecycleScope
+        if (usesCherryLayout) inputView.showCherryCandidateBoard(true)
         bar.unrollButtonStateMachine.push(UnrollButtonStateMachine.TransitionEvent.UnrolledCandidatesAttached)
         offsetJob =
             lifecycleCoroutineScope.launch {
@@ -175,7 +176,12 @@ abstract class BaseUnrolledCandidateWindow(di: DI) :
         }
     }
 
+    protected fun returnToKeyboard() {
+        windowManager.attachWindow(KeyboardWindow)
+    }
+
     override fun onDetached() {
+        if (usesCherryLayout) inputView.showCherryCandidateBoard(false)
         bar.unrollButtonStateMachine.push(
             UnrollButtonStateMachine.TransitionEvent.UnrolledCandidatesDetached,
             UnrollButtonStateMachine.BooleanKey.UnrolledCandidatesEmpty to
