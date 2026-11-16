@@ -232,6 +232,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 layoutManager = verticalLayoutManager()
                 adapter = clipboardBeansAdapter
             }
+            if (usesCherryLayout) clipboardBeansAdapter.addOnPagesUpdatedListener(::refreshCompactBackground)
             if (usesCherryLayout && prefs.cherryClipboardCompactLayout.getValue()) {
                 setCompact(true)
                 clipboardBeansAdapter.compact = true
@@ -604,6 +605,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 layoutManager = verticalLayoutManager()
                 adapter = collectionBeansAdapter
             }
+            if (usesCherryLayout) collectionBeansAdapter.addOnPagesUpdatedListener(::refreshCompactBackground)
             if (usesCherryLayout && prefs.cherryClipboardCompactLayout.getValue()) {
                 setCompact(true)
                 collectionBeansAdapter.compact = true
