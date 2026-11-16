@@ -31,6 +31,8 @@ parser.add_argument("--clipboard-recommendation-footer", nargs=2, metavar=("UNLO
                     help="1116 x 87 recommendation footer captures from y=2369 before and after locking")
 parser.add_argument("--clipboard-recommendation-send-controls", nargs=2, metavar=("MANUAL", "AUTOMATIC"),
                     help="1116 x 87 recommendation footer crops from y=2369 in manual and automatic mode")
+parser.add_argument("--clipboard-send-mode-panel", nargs=2, metavar=("MANUAL", "AUTOMATIC"),
+                    help="1116 x 826 local send-mode panel captures from y=1630")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -160,6 +162,17 @@ if args.clipboard_recommendation_send_controls:
         if reference.size != (1116, 87):
             raise ValueError("Expected a CHERRY recommendation footer crop at 1116 x 87")
         reference.crop((615, 0, 783, 87)).save(assets / f"clipboard-recommend-send-{state}.png")
+
+
+if args.clipboard_send_mode_panel:
+    for selected, capture in zip(("manual", "automatic"), args.clipboard_send_mode_panel):
+        reference = Image.open(capture).convert("RGB")
+        if reference.size != (1116, 826):
+            raise ValueError("Expected a CHERRY send-mode panel crop at 1116 x 826")
+        reference.crop((0, 1, 1116, 116)).save(assets / "clipboard-send-mode-title.png")
+        for name, top in (("manual", 116), ("automatic", 327)):
+            state = "active" if selected == name else "idle"
+            reference.crop((0, top, 1116, top + 211)).save(assets / f"clipboard-send-mode-{name}-{state}.png")
 
 
 def resource(file):

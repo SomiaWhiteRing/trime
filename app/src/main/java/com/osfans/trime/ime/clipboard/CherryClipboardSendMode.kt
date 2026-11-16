@@ -2,6 +2,7 @@
 package com.osfans.trime.ime.clipboard
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -10,11 +11,13 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import com.osfans.trime.R
+import com.osfans.trime.data.theme.ThemeScope
 import splitties.dimensions.dp
 import kotlin.math.roundToInt
 
 internal fun createCherrySendModePanel(
     context: Context,
+    scope: ThemeScope,
     automatic: Boolean,
     close: () -> Unit,
     select: (Boolean) -> Unit,
@@ -23,6 +26,7 @@ internal fun createCherrySendModePanel(
     val labelColor = 0xFFB3B3B3.toInt()
     val accent = 0xFFA21E42.toInt()
     val radius = context.dp(20f)
+    val usesReference = context.getString(R.string.cherry_send_title) == "发送方式选择"
     orientation = LinearLayout.VERTICAL
     isClickable = true
     background = GradientDrawable().apply {
@@ -31,10 +35,13 @@ internal fun createCherrySendModePanel(
     }
 
     addView(FrameLayout(context).apply {
+        val artwork = if (usesReference) scope.drawable("clipboard-send-mode-title.png") else null
+        foreground = artwork
+        val textColor = if (artwork == null) labelColor else Color.TRANSPARENT
         addView(TextView(context).apply {
             setText(R.string.cherry_send_title)
             textSize = 16f
-            setTextColor(labelColor)
+            setTextColor(textColor)
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             setPadding(0, 0, 0, context.dp(5))
             ViewCompat.setAccessibilityHeading(this, true)
@@ -43,7 +50,7 @@ internal fun createCherrySendModePanel(
             text = "×"
             textSize = 26f
             gravity = Gravity.CENTER
-            setTextColor(labelColor)
+            setTextColor(textColor)
             contentDescription = context.getString(R.string.cherry_send_close)
             setOnClickListener { close() }
         }, FrameLayout.LayoutParams(context.dp(38), context.dp(34), Gravity.END or Gravity.BOTTOM).apply {
@@ -57,6 +64,9 @@ internal fun createCherrySendModePanel(
     ).forEach { (mode, title, detail) ->
         addView(FrameLayout(context).apply {
             isSelected = mode == automatic
+            val name = if (mode) "automatic" else "manual"
+            val state = if (isSelected) "active" else "idle"
+            foreground = if (usesReference) scope.drawable("clipboard-send-mode-$name-$state.png") else null
             setOnClickListener { select(mode) }
             addView(TextView(context).apply {
                 setText(title)

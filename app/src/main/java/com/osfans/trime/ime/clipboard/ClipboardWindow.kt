@@ -398,6 +398,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         sendingMode.setOnClickListener {
             clipboardLayout.showPanelOverlay(createCherrySendModePanel(
                 context,
+                scope,
                 automaticRecommendationSend,
                 clipboardLayout::dismissPanelOverlay,
             ) { automatic ->
