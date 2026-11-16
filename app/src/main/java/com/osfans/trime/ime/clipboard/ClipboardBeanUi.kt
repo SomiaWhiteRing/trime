@@ -16,6 +16,8 @@ import android.widget.HorizontalScrollView
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.updateLayoutParams
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
@@ -27,6 +29,7 @@ import splitties.views.dsl.constraintlayout.centerVertically
 import splitties.views.dsl.constraintlayout.constraintLayout
 import splitties.views.dsl.constraintlayout.endOfParent
 import splitties.views.dsl.constraintlayout.startOfParent
+import splitties.views.dsl.constraintlayout.topOfParent
 import splitties.views.dsl.constraintlayout.lParams
 import splitties.views.dsl.core.Ui
 import splitties.views.dsl.core.add
@@ -67,7 +70,8 @@ class ClipboardBeanUi(
         }
 
     private val expand = ImageView(ctx).apply {
-        scaleType = ImageView.ScaleType.CENTER
+        scaleType = ImageView.ScaleType.FIT_START
+        setPadding(dp(12), dp(12), dp(12), 0)
         contentDescription = ctx.getString(R.string.cherry_clipboard_expand)
     }
 
@@ -104,9 +108,10 @@ class ClipboardBeanUi(
                 },
             )
             if (expandable) {
-                add(expand, lParams(dp(34), dp(39)) {
+                add(expand, lParams(dp(36), 0) {
                     endOfParent()
-                    centerVertically()
+                    topOfParent()
+                    bottomOfParent()
                 })
                 add(checkbox, lParams(dp(34), dp(39)) {
                     startOfParent(dp(11))
@@ -142,6 +147,9 @@ class ClipboardBeanUi(
     fun bindExpansion(preview: String, content: String, compact: Boolean, entries: List<Triple<Int, String, () -> Unit>>) {
         checkbox.visibility = View.GONE
         expand.visibility = View.VISIBLE
+        expand.updateLayoutParams<ConstraintLayout.LayoutParams> {
+            marginEnd = ctx.dp(if (compact) 8 else 0)
+        }
         textView.setPaddingDp(if (compact) 20 else 12, 8, if (compact) 45 else 37, 8)
         actions.removeAllViews()
         for ((label, icon, action) in entries) {
@@ -177,9 +185,8 @@ class ClipboardBeanUi(
                 else -> 2
             }
             textView.text = if (expanded) content else preview
-            expand.rotation = if (expanded) 180f else 0f
+            expand.setImageResource(if (expanded) R.drawable.ic_cherry_clipboard_collapse else R.drawable.ic_cherry_clipboard_expand)
         }
-        expand.setImageResource(R.drawable.ic_cherry_clipboard_expand)
         expand.setOnClickListener { setExpanded(actionScroller.visibility != View.VISIBLE) }
         actionScroller.scrollTo(0, 0)
         setExpanded(false)
