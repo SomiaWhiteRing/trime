@@ -303,7 +303,7 @@ class KeyView(
                 "中" -> 1f
                 else -> 2f
             }
-            val offsetY = if (label == "En" || label == "中") 15f else 16f
+            val offsetY = if (label == "En" || label == "中") 15f else 15.5f
             val x = (width + paddingLeft - paddingRight) / 2f + offsetX * scale
             val y = (height + paddingTop - paddingBottom) / 2f - offsetY * scale
             drawCherrySprite(canvas, languageArtwork, x, y, scale)
