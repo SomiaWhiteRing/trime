@@ -63,7 +63,6 @@ def sprite(sheet,index):
 
 config=resource('port/res/default.css')
 for filename, style in (
-    ("cherry-number-enter", 242),
     ("cherry-shift-off", 105), ("cherry-shift-on", 131), ("cherry-shift-marker", 250),
 ):
     sheet,index=config[f'STYLE{style}']['nm_img'].split(',')
@@ -74,6 +73,14 @@ def erase_labels(image, box, sample_x):
     image.paste(image.crop((sample_x,top,sample_x+1,bottom)).resize((right-left,bottom-top)),(left,top))
 
 number=Image.open(args.number_reference).convert('RGB').crop((0,1658,1116,2360))
+enter = number.crop((892, 177, 1116, 352))
+for y in range(54, 107):
+    left = enter.getpixel((66, y))
+    right = enter.getpixel((162, y))
+    for x in range(67, 162):
+        weight = (x - 66) / 96
+        enter.putpixel((x, y), tuple(round(a + (b - a) * weight) for a, b in zip(left, right)))
+enter.save(assets / "cherry-number-enter.png")
 sidebar=number.crop((9,32,186,667))
 erase_labels(sidebar,(26,0,150,sidebar.height),149)
 sidebar.save(assets/'cherry-number-sidebar.png')

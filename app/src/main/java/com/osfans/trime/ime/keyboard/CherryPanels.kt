@@ -72,9 +72,9 @@ internal class CherryNumberWindow(
             manager.attachWindow(CherrySymbolsWindow(di, catalog) { manager.attachWindow(this@CherryNumberWindow) })
         }, 660, 527, 220, 175)
         cell(hitTarget(context, "退格") { key("BackSpace") }, 890, 2, 226, 175)
-        val enter = label(context, enterKey.keyLabel, 16f) { key("Return") }.apply {
+        val enter = label(context, enterKey.keyLabel, 14f) { key("Return") }.apply {
             background = scope.drawable("cherry-number-enter.png")
-            setPadding(0, 0, 0, context.dp(13))
+            setPadding(0, 0, 0, context.dp(5))
         }
         cell(enter, 892, 177, 224, 175)
         cell(hitTarget(context, "空格") { service.commitText(" ") }.apply {
