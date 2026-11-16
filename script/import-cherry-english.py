@@ -65,11 +65,22 @@ def write_profile(apk, directory):
             # Put completions under the same code so Rime orders them by cost.
             entries.setdefault((candidate, prefix), weight)
             key_weights[prefix] = max(key_weights.get(prefix, 0), weight)
+    known_codes = set(key_weights)
+    for (candidate, key), weight in lexical_weights.items():
+        for index in range(len(key) - 1):
+            if key[index] == key[index + 1]:
+                continue
+            typo = key[:index] + key[index + 1] + key[index] + key[index + 2:]
+            if typo in known_codes:
+                continue
+            entry = (candidate, typo)
+            entries[entry] = max(entries.get(entry, 0), weight)
+            key_weights[typo] = max(key_weights.get(typo, 0), weight)
     for key, weight in key_weights.items():
         # Leave the literal input at the head of its candidate list.
         entries[(key, key)] = weight + 1
     with (directory / "cherry_english.dict.yaml").open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write("---\nname: cherry_english\nversion: '3'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
+        stream.write("---\nname: cherry_english\nversion: '4'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
         for (candidate, key), weight in entries.items():
             stream.write(f"{candidate}\t{key}\t{weight}\n")
 
@@ -93,7 +104,7 @@ speller:
     - derive/^([a-z])([a-z]*)$/\U$1\L$2/
 translator:
   dictionary: cherry_english
-  enable_completion: true
+  enable_completion: false
   enable_sentence: false
   enable_user_dict: true
   comment_format:
