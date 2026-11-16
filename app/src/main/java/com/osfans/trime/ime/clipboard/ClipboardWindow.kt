@@ -632,11 +632,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             tabUi.root.minimumWidth = context.dp(if (position == 2) 42 else 56)
             tabUi.root.minimumHeight = context.dp(35)
             tabUi.activeStyle = { active ->
-                tabUi.label.paint.isFakeBoldText = active
+                tabUi.label.setTypeface(theme.fonts.candidate, if (active) Typeface.BOLD else Typeface.NORMAL)
                 tabUi.label.scaleX = if (active) 0.98f else 0.975f
                 tabUi.label.scaleY = if (active) 1f else 0.975f
                 tabUi.label.translationX = when (position) {
-                    0 -> context.dp(1f / 3)
+                    0 -> context.dp(if (active) 0.6f else 1f / 3)
                     1 -> context.dp(1f / 6)
                     else -> 0f
                 }
