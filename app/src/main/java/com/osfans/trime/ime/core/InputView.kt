@@ -6,8 +6,11 @@
 package com.osfans.trime.ime.core
 
 import android.annotation.SuppressLint
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.view.ContextThemeWrapper
+import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
@@ -39,6 +42,7 @@ import com.osfans.trime.ime.keyboard.KeyboardWindow
 import com.osfans.trime.ime.popup.PopupDelegate
 import com.osfans.trime.ime.symbol.LiquidWindow
 import com.osfans.trime.ime.translation.InlineTranslationPanel
+import com.osfans.trime.ime.window.BoardWindow
 import com.osfans.trime.ime.window.BoardWindowManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -272,10 +276,18 @@ class InputView(
                     windowManager.view.updateLayoutParams {
                         height = it + if (cherryCandidateBoard) context.dp(inputBar.themedHeight) else 0
                     }
+                    updateCherryBottomPadding()
                 }
             }
 
         updateKeyboardSize()
+        if (ThemeManager.isCherryThemeActive) {
+            broadcaster.addReceiver(object : InputBroadcastReceiver {
+                override fun onWindowAttached(window: BoardWindow) {
+                    updateCherryBottomPadding()
+                }
+            })
+        }
 
         add(
             preedit.view,
@@ -305,9 +317,7 @@ class InputView(
         bottomPaddingSpace.updateLayoutParams {
             height = keyboardBottomPaddingPx
         }
-        if (ThemeManager.isCherryThemeActive) {
-            bottomPaddingSpace.setBackgroundColor(0xff0d0d0d.toInt())
-        }
+        updateCherryBottomPadding()
         val sidePadding = keyboardSidePaddingPx
         val unset = LayoutParams.UNSET
         if (sidePadding == 0) {
@@ -338,6 +348,20 @@ class InputView(
         }
         preedit.view.setPadding(sidePadding, 0, sidePadding, 0)
         inputBar.view.setPadding(sidePadding, 0, sidePadding, 0)
+    }
+
+    private fun updateCherryBottomPadding() {
+        if (!ThemeManager.isCherryThemeActive) return
+        val keyboardBottom = 0xff0d0d0d.toInt()
+        bottomPaddingSpace.background = when {
+            windowManager.hasCherryClipboard -> ColorDrawable(0xff424242.toInt())
+            windowManager.isAttached(keyboardWindow) && keyboardWindow.isCherryEditingKeyboard ->
+                LayerDrawable(arrayOf(ColorDrawable(keyboardBottom), ColorDrawable(0xff343434.toInt()))).apply {
+                    setLayerHeight(1, context.dp(2))
+                    setLayerGravity(1, Gravity.TOP)
+                }
+            else -> ColorDrawable(keyboardBottom)
+        }
     }
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {

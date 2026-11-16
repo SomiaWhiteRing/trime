@@ -141,6 +141,9 @@ class BoardWindowManager(override val di: DI) : DIAware {
 
     fun isAttached(window: BoardWindow) = currentWindow === window
 
+    internal val hasCherryClipboard: Boolean
+        get() = (currentWindow as? ClipboardWindow)?.usesCherryLayout == true
+
     internal fun handleClipboardBack(commit: Boolean) =
         (currentWindow as? ClipboardWindow)?.handleClipboardBack(commit) == true
 }

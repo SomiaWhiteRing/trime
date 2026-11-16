@@ -87,6 +87,7 @@ class KeyboardWindow(di: DI) :
     private val presetKeyboardIds = theme.presetKeyboards.keys.toList()
     private var currentKeyboardId = ""
     internal val isCherryEnglishKeyboard: Boolean get() = currentKeyboardId in cherryEnglishKeyboards
+    internal val isCherryEditingKeyboard: Boolean get() = currentKeyboardId == "cherry_edit" || currentKeyboardId == "cherry_select"
     private var lastKeyboardId = ""
     private var lastLockKeyboardId = ""
     private var tempAsciiMode: Boolean? = null
