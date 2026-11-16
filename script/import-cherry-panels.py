@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageDraw
 import configparser
 import io
 import zipfile
@@ -55,11 +55,51 @@ parser.add_argument("--clipboard-phrase-library", nargs=2, metavar=("LIBRARY", "
                     help="CHERRY standalone common-phrase screenshot and keyboard filter capture")
 parser.add_argument("--clipboard-phrase-empty", type=Path,
                     help="1116 x 2480 CHERRY empty custom group screenshot")
+parser.add_argument("--clipboard-group-sort", type=Path,
+                    help="1116 x 2480 CHERRY group sorting screenshot with no groups selected")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.clipboard_group_sort:
+    reference = Image.open(args.clipboard_group_sort).convert("RGB")
+    if reference.size != (1116, 2480):
+        raise ValueError("Expected the CHERRY group sorting portrait capture")
+    for name, bounds in (
+        ("header", (0, 72, 1116, 577)),
+        ("handle", (942, 757, 1068, 901)),
+        ("delete-idle", (786, 2330, 1068, 2426)),
+    ):
+        reference.crop(bounds).save(assets / f"clipboard-group-sort-{name}.png")
+    default = reference.crop((48, 577, 1068, 721))
+    default.paste((255, 255, 255), (24, 36, 120, 110))
+    default.paste((255, 255, 255), (920, 42, 1000, 102))
+    default.save(assets / "clipboard-group-sort-default.png")
+    row = reference.crop((48, 757, 1068, 901))
+    row.paste((255, 255, 255), (24, 36, 234, 110))
+    row.paste((255, 255, 255), (920, 42, 1000, 102))
+    row.save(assets / "clipboard-group-sort-row.png")
+    footer = reference.crop((0, 2276, 1116, 2480))
+    footer.paste((255, 255, 255), (0, 1, 288, 204))
+    footer.paste((255, 255, 255), (786, 1, 1068, 204))
+    footer.save(assets / "clipboard-group-sort-footer.png")
+    for name, bounds, center in (
+        ("row-check", (48, 757, 174, 901), (66, 72)),
+        ("select-all", (0, 2276, 288, 2480), (78, 102)),
+    ):
+        tile = reference.crop(bounds)
+        tile.save(assets / f"clipboard-group-sort-{name}-idle.png")
+        glyph = Image.new("RGBA", (240, 240))
+        brush = ImageDraw.Draw(glyph)
+        brush.ellipse((0, 0, 239, 239), fill=(0, 132, 255, 255))
+        brush.line(((70, 122), (107, 153), (171, 87)), fill="white", width=11, joint="curve")
+        glyph = glyph.resize((60, 60), Image.Resampling.LANCZOS)
+        tile.paste((255, 255, 255), (center[0] - 31, center[1] - 31, center[0] + 31, center[1] + 31))
+        tile.paste(glyph, (center[0] - 30, center[1] - 30), glyph)
+        tile.save(assets / f"clipboard-group-sort-{name}-active.png")
+
 
 if args.clipboard_phrase_empty:
     reference = Image.open(args.clipboard_phrase_empty).convert("RGB")

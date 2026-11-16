@@ -6,6 +6,7 @@ import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.MotionEvent
@@ -21,10 +22,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.osfans.trime.R
 import com.osfans.trime.data.db.CherryPhraseGroups
 import splitties.dimensions.dp
+import kotlin.math.roundToInt
 
 internal class CherryPhraseGroupSorting(
     context: Context,
     groups: List<CherryPhraseGroups.Group>,
+    private val artwork: (String) -> Drawable?,
     onBack: () -> Unit,
     onDone: (List<CherryPhraseGroups.Group>) -> Unit,
     private val delete: (List<String>, () -> Unit) -> Unit,
@@ -36,6 +39,8 @@ internal class CherryPhraseGroupSorting(
     private val remove = TextView(context)
     private val done = TextView(context)
     private var deleting = false
+    private val headerArtwork = artwork("clipboard-group-sort-header")
+    private val disabledDeleteArtwork = artwork("clipboard-group-sort-delete-idle")
     private val gesture: ItemTouchHelper
     private val rows: RecyclerView.Adapter<GroupRow>
 
@@ -43,43 +48,47 @@ internal class CherryPhraseGroupSorting(
         orientation = VERTICAL
         setBackgroundColor(Color.WHITE)
         addView(FrameLayout(context).apply {
+            background = headerArtwork
             addView(TextView(context).apply {
                 setText(R.string.cherry_library_sort_groups)
                 textSize = 16f
-                setTextColor(Color.BLACK)
+                setTextColor(if (headerArtwork == null) Color.BLACK else Color.TRANSPARENT)
                 gravity = Gravity.CENTER
             }, FrameLayout.LayoutParams(-1, -1))
             addView(TextView(context).apply {
-                text = "‹"
+                text = if (headerArtwork == null) "‹" else ""
                 textSize = 28f
                 gravity = Gravity.CENTER
                 setTextColor(Color.BLACK)
                 contentDescription = context.getText(android.R.string.cancel)
                 setOnClickListener { if (!deleting) onBack() }
-            }, FrameLayout.LayoutParams(dp(42), -1))
+            }, FrameLayout.LayoutParams(dp(42), dp(52)))
             done.apply {
                 setText(R.string.cherry_library_sort_done)
                 textSize = 14f
                 gravity = Gravity.CENTER
-                setTextColor(accent)
+                setTextColor(if (headerArtwork == null) accent else Color.TRANSPARENT)
                 setOnClickListener { if (!deleting) onDone(draft.toList()) }
             }
-            addView(done, FrameLayout.LayoutParams(dp(58), -1, Gravity.END))
-        }, LayoutParams(-1, dp(52)))
-        addView(TextView(context).apply {
+            addView(done, FrameLayout.LayoutParams(dp(58), dp(52), Gravity.END))
+        }, LayoutParams(-1, if (headerArtwork == null) dp(52) else dp(505f / 3f).roundToInt()))
+        if (headerArtwork == null) addView(TextView(context).apply {
             setText(R.string.cherry_library_sort_hint)
             textSize = 12f
             setTextColor(0xFFB9BDC5.toInt())
             gravity = Gravity.CENTER
         }, LayoutParams(-1, dp(30)))
-        for (label in listOf(R.string.cherry_library_favorites_folder, R.string.cherry_library_default)) {
+        val fixedRows = if (headerArtwork == null) listOf(R.string.cherry_library_favorites_folder, R.string.cherry_library_default)
+        else listOf(R.string.cherry_library_default)
+        for (label in fixedRows) {
             addView(TextView(context).apply {
                 setText(label)
                 textSize = 14f
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(12), 0, dp(12), 0)
-                setTextColor(0xFF555555.toInt())
-                background = rowBackground()
+                val reference = if (label == R.string.cherry_library_default) artwork("clipboard-group-sort-default") else null
+                setTextColor(if (reference == null) 0xFF555555.toInt() else Color.TRANSPARENT)
+                background = reference ?: rowBackground()
             }, LayoutParams(-1, dp(if (label == R.string.cherry_library_favorites_folder) 70 else 48)).apply {
                 marginStart = dp(16)
                 marginEnd = dp(16)
@@ -114,9 +123,12 @@ internal class CherryPhraseGroupSorting(
         gesture.attachToRecyclerView(recycler)
         addView(recycler, LayoutParams(-1, 0, 1f))
         addView(FrameLayout(context).apply {
+            val footer = artwork("clipboard-group-sort-footer")
+            background = footer
             all.apply {
+                if (footer != null) buttonDrawable = null
                 setText(R.string.cherry_clipboard_select_all)
-                setTextColor(Color.BLACK)
+                setTextColor(if (footer == null) Color.BLACK else Color.TRANSPARENT)
                 setOnClickListener {
                     checked.clear()
                     if (isChecked) draft.forEach { checked.add(it.id) }
@@ -124,7 +136,7 @@ internal class CherryPhraseGroupSorting(
                     updateFooter()
                 }
             }
-            addView(all, FrameLayout.LayoutParams(dp(96), -1).apply { marginStart = dp(12) })
+            addView(all, FrameLayout.LayoutParams(dp(96), -1))
             remove.apply {
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
@@ -132,11 +144,19 @@ internal class CherryPhraseGroupSorting(
                 background = actionBackground()
                 setOnClickListener { confirmDeletion() }
             }
-            addView(remove, FrameLayout.LayoutParams(dp(95), dp(33), Gravity.END or Gravity.CENTER_VERTICAL).apply {
+            addView(remove, FrameLayout.LayoutParams(dp(94), dp(32), Gravity.TOP or Gravity.END).apply {
                 marginEnd = dp(16)
+                topMargin = dp(18)
             })
-        }, LayoutParams(-1, dp(65)))
+        }, LayoutParams(-1, dp(68)))
         updateFooter()
+    }
+
+    private fun updateSelectionArtwork(view: CheckBox, surface: String) {
+        val state = if (view.isChecked) "active" else "idle"
+        val image = artwork("clipboard-group-sort-$surface-$state") ?: return
+        view.buttonDrawable = null
+        view.background = image
     }
 
     private fun rowBackground() = GradientDrawable().apply {
@@ -153,7 +173,11 @@ internal class CherryPhraseGroupSorting(
         all.isChecked = draft.isNotEmpty() && checked.size == draft.size
         done.isEnabled = !deleting
         remove.isEnabled = checked.isNotEmpty() && !deleting
-        remove.alpha = if (remove.isEnabled) 1f else 0.32f
+        updateSelectionArtwork(all, "select-all")
+        val idle = checked.isEmpty() && disabledDeleteArtwork != null
+        remove.background = if (idle) disabledDeleteArtwork else actionBackground()
+        remove.setTextColor(if (idle) Color.TRANSPARENT else Color.WHITE)
+        remove.alpha = if (idle || remove.isEnabled) 1f else 0.32f
         remove.text = context.getString(R.string.cherry_library_delete_groups, checked.size)
     }
 
@@ -162,7 +186,7 @@ internal class CherryPhraseGroupSorting(
         val dialog = Dialog(context).apply { requestWindowFeature(Window.FEATURE_NO_TITLE) }
         val content = LinearLayout(context).apply {
             orientation = VERTICAL
-            setPadding(dp(24), dp(30), dp(24), dp(26))
+            setPadding(dp(26), dp(40), dp(26), dp(27))
             background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = dp(16f) }
         }
         content.addView(TextView(context).apply {
@@ -170,7 +194,7 @@ internal class CherryPhraseGroupSorting(
             textSize = 16f
             setTextColor(Color.BLACK)
             gravity = Gravity.CENTER
-        }, LayoutParams(-1, dp(68)))
+        }, LayoutParams(-1, dp(70)))
         content.addView(LinearLayout(context).apply {
             for (positive in listOf(false, true)) {
                 addView(TextView(context).apply {
@@ -198,11 +222,14 @@ internal class CherryPhraseGroupSorting(
                     }
                 }, LayoutParams(0, -1, 1f).apply { if (!positive) marginEnd = dp(10) })
             }
-        }, LayoutParams(-1, dp(44)))
+        }, LayoutParams(-1, dp(44)).apply { topMargin = dp(18) })
         dialog.setContentView(content)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.show()
-        dialog.window?.setLayout(dp(302), -2)
+        dialog.window?.apply {
+            setLayout(dp(302), -2)
+            setDimAmount(0.5f)
+        }
     }
 
     private inner class GroupRow : RecyclerView.ViewHolder(LinearLayout(context)) {
@@ -213,13 +240,15 @@ internal class CherryPhraseGroupSorting(
         init {
             val root = itemView as LinearLayout
             root.gravity = Gravity.CENTER_VERTICAL
-            root.background = rowBackground()
+            root.background = artwork("clipboard-group-sort-row") ?: rowBackground()
             root.layoutParams = RecyclerView.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(12) }
             root.addView(selector, LayoutParams(dp(42), -1))
             title.textSize = 14f
             title.setTextColor(Color.BLACK)
             root.addView(title, LayoutParams(0, -2, 1f))
-            handle.text = "≡"
+            val handleArtwork = artwork("clipboard-group-sort-handle")
+            handle.background = handleArtwork
+            handle.text = if (handleArtwork == null) "≡" else ""
             handle.textSize = 22f
             handle.setTextColor(0xFFB9BDC5.toInt())
             handle.gravity = Gravity.CENTER
@@ -236,8 +265,10 @@ internal class CherryPhraseGroupSorting(
         fun bind(group: CherryPhraseGroups.Group) {
             title.text = group.title
             selector.isChecked = group.id in checked
+            updateSelectionArtwork(selector, "row-check")
             selector.setOnClickListener {
                 if (selector.isChecked) checked.add(group.id) else checked.remove(group.id)
+                updateSelectionArtwork(selector, "row-check")
                 updateFooter()
             }
         }

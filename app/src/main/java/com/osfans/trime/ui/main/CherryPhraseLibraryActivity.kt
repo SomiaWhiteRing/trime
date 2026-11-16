@@ -258,7 +258,7 @@ class CherryPhraseLibraryActivity : Activity() {
 
     private fun showGroupSorting() {
         sorting = true
-        val view = CherryPhraseGroupSorting(this, groups, onBack = ::showGroupSettings, onDone = { order ->
+        val view = CherryPhraseGroupSorting(this, groups, ::artwork, onBack = ::showGroupSettings, onDone = { order ->
             val activeId = groups.getOrNull(selected - 2)?.id
             groups.clear()
             groups.addAll(order)
