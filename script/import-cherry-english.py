@@ -76,11 +76,44 @@ def write_profile(apk, directory):
             entry = (candidate, typo)
             entries[entry] = max(entries.get(entry, 0), weight)
             key_weights[typo] = max(key_weights.get(typo, 0), weight)
+    # Horizontal offsets and key widths from CHERRY's 1080 px en_26 layout.
+    keys = {
+        letter: (row, offset + index * 108)
+        for row, (offset, letters) in enumerate(
+            ((0, "qwertyuiop"), (54, "asdfghjkl"), (121, "zxcvbnm"))
+        )
+        for index, letter in enumerate(letters)
+    }
+    neighbours = {
+        letter: [
+            other for other, (other_row, other_x) in keys.items()
+            if other != letter and abs(other_row - row) <= 1 and abs(other_x - x) <= 108
+        ]
+        for letter, (row, x) in keys.items()
+    }
+    substitutions = {}
+    lowest_lexical_weight = min(lexical_weights.values())
+    for (candidate, key), weight in lexical_weights.items():
+        if len(key) < 4:
+            continue
+        # Reserve the earlier slots for stronger literal completions.
+        corrected_weight = weight - 18 * cost_scale - 1
+        if corrected_weight < lowest_lexical_weight:
+            continue
+        for index, letter in enumerate(key):
+            for neighbour in neighbours[letter]:
+                typo = key[:index] + neighbour + key[index + 1:]
+                if (candidate, typo) in entries or corrected_weight <= substitutions.get(typo, (0, ""))[0]:
+                    continue
+                substitutions[typo] = (corrected_weight, candidate)
+    for typo, (weight, candidate) in substitutions.items():
+        entries[(candidate, typo)] = weight
+        key_weights[typo] = max(key_weights.get(typo, 0), weight)
     for key, weight in key_weights.items():
         # Leave the literal input at the head of its candidate list.
         entries[(key, key)] = weight + 1
     with (directory / "cherry_english.dict.yaml").open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write("---\nname: cherry_english\nversion: '4'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
+        stream.write("---\nname: cherry_english\nversion: '5'\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
         for (candidate, key), weight in entries.items():
             stream.write(f"{candidate}\t{key}\t{weight}\n")
 
