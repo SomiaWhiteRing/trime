@@ -19,6 +19,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.doOnPreDraw
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.flexbox.FlexWrap
 import com.google.android.flexbox.FlexboxLayout
@@ -164,7 +165,14 @@ class ClipboardLayout(
                 }
                 setOnClickListener {
                     dismissPanelOverlay()
-                    viewPager.setCurrentItem(index, false)
+                    if (!selected) {
+                        // Let the uncovered page draw once before selecting the new tab.
+                        this@ClipboardLayout.doOnPreDraw { layout ->
+                            layout.postOnAnimation {
+                                if (layout.isAttachedToWindow) viewPager.setCurrentItem(index, false)
+                            }
+                        }
+                    }
                 }
             }
             val width = if (artwork == null) wrapContent else dp(if (artworkName == "recommend") 52 else 66)
