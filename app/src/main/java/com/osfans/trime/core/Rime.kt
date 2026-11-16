@@ -267,6 +267,8 @@ class Rime :
 
     override suspend fun selectSchema(schemaId: String) = withRimeContext { selectRimeSchema(schemaId) }
 
+    override suspend fun selectCherrySchema(schemaId: String) = withRimeContext { selectCherryRimeSchema(schemaId) }
+
     override suspend fun currentSchema(): RimeSchema = withRimeContext {
         RimeSchema(getCurrentRimeSchema())
     }
@@ -607,6 +609,9 @@ class Rime :
 
         @JvmStatic
         external fun selectRimeSchema(schemaId: String): Boolean
+
+        @JvmStatic
+        external fun selectCherryRimeSchema(schemaId: String): Boolean
 
         // testing
         @JvmStatic

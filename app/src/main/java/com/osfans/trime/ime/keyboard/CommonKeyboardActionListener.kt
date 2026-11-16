@@ -266,14 +266,14 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                         if (rawInput.isEmpty()) commitComposition()
                         when (prediction) {
                             true -> {
-                                if (selectSchema("cherry_english")) {
+                                if (selectCherrySchema("cherry_english")) {
                                     setRuntimeOption("ascii_mode", false)
                                     cherryPreferences.edit().putBoolean("prediction", true).apply()
                                 }
                             }
 
                             false -> {
-                                if (selectSchema(chinese)) {
+                                if (selectCherrySchema(chinese)) {
                                     setRuntimeOption("ascii_mode", true)
                                     cherryPreferences.edit().putBoolean("prediction", false).apply()
                                 }
@@ -282,7 +282,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                             null -> when {
                                 returnToChinese -> {
                                     val needsChineseSchema = current == "cherry_english" || current.isBlank()
-                                    if (needsChineseSchema && !selectSchema(chinese)) {
+                                    if (needsChineseSchema && !selectCherrySchema(chinese)) {
                                         refreshInputPanel()
                                         return@updateCherryLanguagePanel
                                     }
@@ -298,7 +298,7 @@ class CommonKeyboardActionListener(override val di: DI) : DIAware {
                                     if (current.isNotBlank() && current != "cherry_english") {
                                         cherryPreferences.edit().putString("chinese_schema", current).apply()
                                     }
-                                    if (transferToEnglish && selectSchema("cherry_english")) {
+                                    if (transferToEnglish && selectCherrySchema("cherry_english")) {
                                         if (rawInput.isNotEmpty() && !setRawInput(rawInput, rawInput.encodeToByteArray().size)) {
                                             withContext(Dispatchers.Main.immediate) { service.commitText(rawInput) }
                                         }

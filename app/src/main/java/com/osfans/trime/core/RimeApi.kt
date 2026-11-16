@@ -68,6 +68,8 @@ interface RimeApi {
 
     suspend fun selectSchema(schemaId: String): Boolean
 
+    suspend fun selectCherrySchema(schemaId: String): Boolean
+
     suspend fun currentSchema(): RimeSchema
 
     suspend fun commitComposition(): Boolean

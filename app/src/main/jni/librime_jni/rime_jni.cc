@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <rime_api.h>
+#include <rime/config.h>
 
+#include <ctime>
 #include <memory>
 #include <string>
 #include <vector>
@@ -59,11 +61,13 @@ class Rime {
   }
 
   bool deploySchema(std::string_view schemaFile) {
+    cherryStandby_.reset();
     return rime->deploy_schema(schemaFile.data());
   }
 
   bool deployConfigFile(std::string_view configFile,
                         std::string_view versionKey) {
+    cherryStandby_.reset();
     return rime->deploy_config_file(configFile.data(), versionKey.data());
   }
 
@@ -139,8 +143,50 @@ class Rime {
   }
 
   bool selectSchema(std::string_view schemaId) {
+    cherryStandby_.reset();
     return rime->select_schema(session(), schemaId.data());
   }
+
+  bool selectCherrySchema(const std::string& schemaId) {
+    const auto active = session();
+    if (!active) return false;
+    if (currentSchemaId() == schemaId) return true;
+
+    char standbySchema[MAX_BUFFER_LENGTH] = {};
+    if (!cherryStandby_ ||
+        !rime->get_current_schema(cherryStandby_->id(), standbySchema, sizeof standbySchema) ||
+        schemaId != standbySchema) {
+      // Session construction and schema selection send synchronous notifications.
+      struct SuppressPreparation {
+        SuppressPreparation() { preparingCherrySession = true; }
+        ~SuppressPreparation() { preparingCherrySession = false; }
+      } suppression;
+      try {
+        auto standby = std::make_shared<SessionHolder>();
+        if (!rime->select_schema(standby->id(), schemaId.c_str())) return false;
+        cherryStandby_ = std::move(standby);
+      } catch (const std::runtime_error&) {
+        return false;
+      }
+    }
+
+    // The caller commits or saves composing input before changing schemas.
+    const auto softCursor = rime->get_option(active, "soft_cursor");
+    rime->clear_composition(active);
+    session_.swap(cherryStandby_);
+    rime->set_option(session_->id(), "soft_cursor", softCursor);
+    if (auto* config = rime::Config::Require("user_config")) {
+      std::unique_ptr<rime::Config> userConfig(config->Create("user"));
+      if (userConfig) {
+        userConfig->SetString("var/previously_selected_schema", schemaId);
+        userConfig->SetInt("var/schema_access_time/" + schemaId, static_cast<int>(std::time(nullptr)));
+        userConfig->Save();
+      }
+    }
+    return true;
+  }
+
+  inline static thread_local bool preparingCherrySession = false;
 
   std::string rawInput() {
     auto cStr = rime->get_input(session());
@@ -206,11 +252,13 @@ class Rime {
   }
 
   void exit() {
+    cherryStandby_.reset();
     session_.reset();
     rime->finalize();
   }
 
   bool sync() {
+    cherryStandby_.reset();
     session_.reset();
     return rime->sync_user_data();
   }
@@ -218,6 +266,7 @@ class Rime {
  private:
   RimeApi* rime;
   std::shared_ptr<SessionHolder> session_;
+  std::shared_ptr<SessionHolder> cherryStandby_;
 
   RimeSessionId session(bool requestNewSession = true) {
     if (!session_ && requestNewSession) {
@@ -255,6 +304,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_osfans_trime_core_Rime_startupRime(
   auto notificationHandler = [](void* context_object, RimeSessionId session_id,
                                 const char* message_type,
                                 const char* message_value) {
+    if (session_id && Rime::preparingCherrySession) return;
     auto env = GlobalRef->AttachEnv();
     int type = 0;  // unknown
     if (strcmp(message_type, "schema") == 0) {
@@ -368,6 +418,13 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_osfans_trime_core_Rime_selectRimeSchema(JNIEnv* env, jclass /* thiz */,
                                                  jstring schema_id) {
   return Rime::Instance().selectSchema(*CString(env, schema_id));
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_osfans_trime_core_Rime_selectCherryRimeSchema(JNIEnv* env,
+                                                       jclass /* thiz */,
+                                                       jstring schema_id) {
+  return Rime::Instance().selectCherrySchema(*CString(env, schema_id));
 }
 
 // testing
