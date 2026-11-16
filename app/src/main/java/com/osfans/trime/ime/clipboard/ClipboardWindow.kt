@@ -119,6 +119,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private var clipboardCountJob: Job? = null
     private var collectionBeansSubmitJob: Job? = null
     private var translationPopup: PopupWindow? = null
+    private var deleteConfirmation: PopupWindow? = null
     private lateinit var selectionFooter: LinearLayout
     private lateinit var selectionDelete: TextView
     private lateinit var selectionAll: CheckBox
@@ -187,7 +188,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             }
 
             override fun onDelete(id: Int) {
-                service.lifecycleScope.launch { ClipboardHelper.delete(id) }
+                if (usesCherryLayout) {
+                    confirmCherryDelete { ClipboardHelper.delete(id) }
+                } else {
+                    service.lifecycleScope.launch { ClipboardHelper.delete(id) }
+                }
             }
 
             override val enableCollection: Boolean = true
@@ -367,14 +372,10 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             setOnClickListener {
                 val ids = clipboardBeansAdapter.selection.orEmpty().toList()
                 if (ids.isNotEmpty()) {
-                    service.showDialog(AlertDialog.Builder(context)
-                        .setNegativeButton(R.string.cancel, null)
-                        .setPositiveButton(R.string.ok) { _, _ ->
-                            service.lifecycleScope.launch {
-                                ClipboardHelper.deleteByIds(ids)
-                                updateSelection(null)
-                            }
-                        }.create())
+                    confirmCherryDelete {
+                        ClipboardHelper.deleteByIds(ids)
+                        updateSelection(null)
+                    }
                 }
             }
         }
@@ -387,6 +388,13 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         selectionDelete.text = context.getString(R.string.cherry_clipboard_delete_count, ids.orEmpty().size)
         selectionDelete.isEnabled = !ids.isNullOrEmpty()
         selectionAll.isChecked = !ids.isNullOrEmpty() && ids.size == clipboardBeansAdapter.snapshot().items.size
+    }
+
+    private fun confirmCherryDelete(delete: suspend () -> Unit) {
+        deleteConfirmation?.dismiss()
+        deleteConfirmation = showCherryDeleteConfirmation(clipboardLayout) {
+            service.lifecycleScope.launch { delete() }
+        }
     }
 
     private fun refreshCategoryLabels() {
@@ -685,6 +693,8 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
 
     override fun onDetached() {
+        deleteConfirmation?.dismiss()
+        deleteConfirmation = null
         translationPopup?.dismiss()
         translationPopup = null
         clipboardBeansAdapter.dismissPopupMenu()

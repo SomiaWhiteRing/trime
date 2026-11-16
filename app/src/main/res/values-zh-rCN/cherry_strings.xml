@@ -6,6 +6,7 @@
     <string name="cherry_clipboard_multi_select">多选</string>
     <string name="cherry_clipboard_select_all">全选</string>
     <string name="cherry_clipboard_delete_count">删除(%1$d)</string>
+    <string name="cherry_clipboard_confirm_delete">确认要删除该条内容吗？</string>
     <string name="cherry_clipboard_translate">翻译</string>
     <string name="cherry_clipboard_original">原文</string>
     <string name="cherry_clipboard_translation_empty">哎呀，暂无翻译结果</string>

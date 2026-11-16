@@ -6,6 +6,7 @@
     <string name="cherry_clipboard_multi_select">Multi-select</string>
     <string name="cherry_clipboard_select_all">Select all</string>
     <string name="cherry_clipboard_delete_count">Delete(%1$d)</string>
+    <string name="cherry_clipboard_confirm_delete">Delete this content?</string>
     <string name="cherry_clipboard_translate">Translate</string>
     <string name="cherry_clipboard_original">Original</string>
     <string name="cherry_clipboard_translation_empty">No translation available</string>
