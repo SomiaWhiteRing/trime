@@ -13,11 +13,26 @@ parser.add_argument("skin", type=Path, help="Local CHERRY classic black BDS pack
 parser.add_argument("number_reference", type=Path, help="1116x2480 portrait capture of the numeric keyboard")
 parser.add_argument("symbol_reference", type=Path, help="1116x2480 portrait capture of the Chinese symbol page")
 parser.add_argument("translation_reference", type=Path, help="1116x2480 portrait capture of the active translation toolbar")
+parser.add_argument("--clipboard-reference", type=Path, help="1116x2480 portrait capture of the open clipboard")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
 assets.mkdir(parents=True, exist_ok=True)
 skin = zipfile.ZipFile(args.skin)
+
+if args.clipboard_reference:
+    reference = Image.open(args.clipboard_reference).convert("RGBA")
+    for name, visible, bounds in (
+        ("back", (19, 1568, 55, 1624), (0, 1541, 111, 1652)),
+        ("menu", (1038, 1574, 1087, 1617), (993, 1535, 1116, 1658)),
+    ):
+        x, y, right, bottom = bounds
+        glyph = Image.new("RGBA", (right - x, bottom - y))
+        glyph.paste(reference.crop(visible), (visible[0] - x, visible[1] - y))
+        if name == "menu":
+            glyph.paste(reference.crop((997, 1546, 1002, 1644)), (4, 11))
+        glyph.save(assets / f"clipboard-title-{name}.png")
+
 
 def resource(file):
     ini=configparser.ConfigParser(interpolation=None,strict=False)

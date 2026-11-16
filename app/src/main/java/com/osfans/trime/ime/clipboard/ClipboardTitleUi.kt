@@ -6,6 +6,13 @@
 package com.osfans.trime.ime.clipboard
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.Theme
 import com.osfans.trime.data.theme.ThemeScope
@@ -28,7 +35,10 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     private val cherry = "cherry_edit" in theme.presetKeyboards
 
     val tabLayout = InputTabLayout(ctx).apply {
-        if (cherry) setPadding(dp(37), 0, 0, 0)
+        if (cherry) {
+            setPadding(dp(37), 0, 0, 0)
+            horizontalTabMarginDp = 2
+        }
     }
 
     val backButton = if (cherry) cherryButton("clipboard-title-back.png") else null
@@ -47,7 +57,7 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
     private val size = theme.style.run { candidateViewHeight + commentHeight }
 
     override val root = constraintLayout {
-        if (cherry) setBackgroundColor(0xFF414141.toInt())
+        if (cherry) setBackgroundColor(0xFF434343.toInt())
         add(
             tabLayout,
             lParams(wrapContent, dp(size)) {
@@ -69,4 +79,57 @@ class ClipboardTitleUi(override val ctx: Context, private val scope: ThemeScope)
             },
         )
     }
+}
+
+
+internal class CherryClipboardTabBackground(
+    private val padding: Float,
+    private val divider: Float,
+) : Drawable() {
+    private val path = Path()
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var opacity = 255
+
+    override fun onBoundsChange(bounds: Rect) {
+        val left = bounds.left.toFloat()
+        val right = bounds.right.toFloat()
+        val top = bounds.top.toFloat()
+        val bottom = bounds.bottom.toFloat()
+        val inset = padding.coerceAtMost(bounds.width() / 2f)
+        path.reset()
+        path.moveTo(left, bottom)
+        path.cubicTo(left + inset, bottom, left, top, left + inset, top)
+        path.lineTo(right - inset, top)
+        path.cubicTo(right, top, right - inset, bottom, right, bottom)
+    }
+
+    override fun draw(canvas: Canvas) {
+        paint.style = Paint.Style.FILL
+        paint.color = 0xFF363636.toInt()
+        paint.alpha = opacity
+        canvas.drawPath(path, paint)
+
+        paint.style = Paint.Style.STROKE
+        paint.color = 0xFF5E5E5E.toInt()
+        paint.alpha = opacity
+        paint.strokeWidth = divider
+        canvas.drawPath(path, paint)
+
+        val inset = padding.coerceAtMost(bounds.width() / 2f)
+        paint.strokeWidth = divider * 1.5f
+        canvas.drawLine(bounds.left + inset, bounds.top.toFloat(), bounds.right - inset, bounds.top.toFloat(), paint)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        opacity = alpha
+        invalidateSelf()
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        paint.colorFilter = colorFilter
+        invalidateSelf()
+    }
+
+    @Deprecated("Deprecated in Android")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }

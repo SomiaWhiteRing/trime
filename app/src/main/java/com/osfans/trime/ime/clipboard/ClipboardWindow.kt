@@ -8,7 +8,6 @@ package com.osfans.trime.ime.clipboard
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.util.Patterns
 import android.view.Gravity
 import android.view.View
@@ -61,7 +60,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     private lateinit var clipboardLayout: ClipboardLayout
     private lateinit var clipboardPagesAdapter: ClipboardPagesAdapter
     private var wasAttached = false
-    private val usesCherryLayout: Boolean
+    internal val usesCherryLayout: Boolean
         get() = "cherry_edit" in theme.presetKeyboards
 
     private enum class Category(val label: Int) {
@@ -330,11 +329,11 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
             tabUi.root.minimumHeight = context.dp(35)
             tabUi.activeStyle = { active ->
                 tabUi.label.setTextColor(if (active) 0xFFC51640.toInt() else 0xFFB9B9B9.toInt())
-                tabUi.root.background = if (active) GradientDrawable().apply {
-                    setColor(0xFF343434.toInt())
-                    cornerRadius = context.dp(7).toFloat()
-                    setStroke(context.dp(0.5f).toInt().coerceAtLeast(1), 0xFF575757.toInt())
-                } else null
+                tabUi.root.background = if (active) {
+                    CherryClipboardTabBackground(context.dp(12f), context.dp(0.5f))
+                } else {
+                    null
+                }
             }
         }
     }

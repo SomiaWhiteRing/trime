@@ -55,6 +55,8 @@ class InputTabLayout(context: Context) : LinearLayout(context) {
         }
     }
 
+    var horizontalTabMarginDp = 4
+
     private var tabs: Array<TabUi> = arrayOf()
     private var selected = -1
 
@@ -80,7 +82,7 @@ class InputTabLayout(context: Context) : LinearLayout(context) {
                 tabUi.root,
                 lParams {
                     gravity = Gravity.CENTER_VERTICAL
-                    setMargins(dp(4), 0, dp(4), 0)
+                    setMargins(dp(horizontalTabMarginDp), 0, dp(horizontalTabMarginDp), 0)
                 },
             )
             tabUi.root.setOnClickListener {

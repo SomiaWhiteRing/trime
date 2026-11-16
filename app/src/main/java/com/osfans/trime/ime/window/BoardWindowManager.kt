@@ -13,7 +13,9 @@ import androidx.transition.TransitionManager
 import androidx.transition.TransitionSet
 import com.osfans.trime.R
 import com.osfans.trime.ime.broadcast.InputBroadcaster
+import com.osfans.trime.ime.clipboard.ClipboardWindow
 import com.osfans.trime.ime.keyboard.CherryNumberWindow
+import com.osfans.trime.ime.keyboard.CherrySymbolsWindow
 import com.osfans.trime.ime.keyboard.KeyboardWindow
 import org.kodein.di.DI
 import org.kodein.di.DIAware
@@ -89,9 +91,12 @@ class BoardWindowManager(override val di: DI) : DIAware {
         if (currentWindow != null) {
             val oldWindow = currentWindow!!
             val oldView = currentView!!
-            val switchesCherryNumber = oldWindow is CherryNumberWindow && window is KeyboardWindow ||
-                oldWindow is KeyboardWindow && window is CherryNumberWindow
-            if (!switchesCherryNumber) {
+            val switchesCherryPanel = when {
+                oldWindow.isCherryPanel() -> window is KeyboardWindow || window.isCherryPanel()
+                window.isCherryPanel() -> oldWindow is KeyboardWindow
+                else -> false
+            }
+            if (!switchesCherryPanel) {
                 prepareAnimation(
                     oldWindow.exitAnimation(window),
                     window.enterAnimation(oldWindow),
@@ -116,6 +121,12 @@ class BoardWindowManager(override val di: DI) : DIAware {
         window.onAttached()
         currentWindow = window
         broadcaster.onWindowAttached(window)
+    }
+
+    private fun BoardWindow.isCherryPanel(): Boolean = when (this) {
+        is CherryNumberWindow, is CherrySymbolsWindow -> true
+        is ClipboardWindow -> usesCherryLayout
+        else -> false
     }
 
     /** Restyles the window currently on screen after a scheme switch. */
