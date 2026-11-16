@@ -25,6 +25,8 @@ parser.add_argument("--clipboard-title-tabs", nargs=2, action="append", default=
                     help="1116 x 114 title crop from y=1630 with history, phrases, or recommend selected")
 parser.add_argument("--clipboard-chooser-tabs", nargs=2, action="append", default=[], metavar=("SELECTED", "CAPTURE"),
                     help="1116 x 184 chooser crop from y=1630 with history, phrases, or recommend selected")
+parser.add_argument("--clipboard-filter", nargs=2, action="append", default=[], metavar=("SELECTED", "CAPTURE"),
+                    help="1116 x 90 history filter crop from y=1754 with one of all, recent, text, number, link selected")
 args = parser.parse_args()
 theme_dir = args.profile
 assets = theme_dir / "backgrounds" / "baidu_cherry"
@@ -123,6 +125,19 @@ for selected, capture in args.clipboard_chooser_tabs:
     for name, (left, right) in chooser_bounds.items():
         state = "active" if selected == name else "idle"
         reference.crop((left, 42, right, 123)).save(assets / f"clipboard-chooser-{name}-{state}.png")
+
+
+filters = ("all", "recent", "text", "number", "link")
+for selected, capture in args.clipboard_filter:
+    if selected not in filters:
+        parser.error(f"unknown clipboard filter {selected!r}")
+    reference = Image.open(capture).convert("RGB")
+    if reference.size != (1116, 90):
+        raise ValueError("Expected a CHERRY clipboard filter crop at 1116 x 90")
+    for index, name in enumerate(filters):
+        left = 24 + 135 * index
+        state = "active" if name == selected else "idle"
+        reference.crop((left, 0, left + 135, 90)).save(assets / f"clipboard-filter-{name}-{state}.png")
 
 
 def resource(file):

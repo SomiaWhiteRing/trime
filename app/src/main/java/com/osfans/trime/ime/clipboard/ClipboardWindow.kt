@@ -90,12 +90,12 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     internal val usesCherryLayout: Boolean
         get() = "cherry_edit" in theme.presetKeyboards
 
-    private enum class Category(val label: Int) {
-        ALL(R.string.cherry_clipboard_all),
-        RECENT(R.string.cherry_clipboard_recent),
-        TEXT(R.string.cherry_clipboard_text),
-        NUMBER(R.string.cherry_clipboard_number),
-        LINK(R.string.cherry_clipboard_link),
+    private enum class Category(val label: Int, val referenceText: String) {
+        ALL(R.string.cherry_clipboard_all, "全部"),
+        RECENT(R.string.cherry_clipboard_recent, "最近"),
+        TEXT(R.string.cherry_clipboard_text, "文本"),
+        NUMBER(R.string.cherry_clipboard_number, "数字"),
+        LINK(R.string.cherry_clipboard_link, "链接"),
     }
 
     private val category = MutableStateFlow(Category.ALL)
@@ -108,11 +108,21 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
     }
     private val numericClip = Regex("""[+\-]?[\p{Nd}]+(?:[.,]\p{Nd}+)?""")
     private lateinit var categoryLabels: List<TextView>
+    private val categoryArtwork by lazy {
+        Category.entries.mapNotNull { filter ->
+            if (context.getText(filter.label).toString() != filter.referenceText) return@mapNotNull null
+            val name = filter.name.lowercase()
+            val idle = scope.drawable("clipboard-filter-$name-idle.png") ?: return@mapNotNull null
+            val active = scope.drawable("clipboard-filter-$name-active.png") ?: return@mapNotNull null
+            filter to (idle to active)
+        }.toMap()
+    }
     private val historyCount by lazy {
         TextView(context).apply {
             textSize = 13f
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
-            setTextColor(scope.colors.keySymbolColor)
+            setPadding(0, 0, context.dp(6), context.dp(14f / 3).roundToInt())
+            setTextColor(0xFF757575.toInt())
         }
     }
 
@@ -249,6 +259,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                 val categories = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
+                    setBackgroundColor(0xFF363636.toInt())
                     setPadding(context.dp(8), 0, context.dp(8), 0)
                 }
                 categoryLabels = Category.entries.map { filter ->
@@ -265,7 +276,7 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
                         categories.addView(
                             this,
                             LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                if (filter in categoryArtwork) context.dp(45) else LinearLayout.LayoutParams.WRAP_CONTENT,
                                 LinearLayout.LayoutParams.MATCH_PARENT,
                             ),
                         )
@@ -447,8 +458,14 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         Category.entries.zip(categoryLabels).forEach { (filter, label) ->
             val selected = filter == category.value
             label.isSelected = selected
-            label.setTextColor(if (selected) 0xFFC51640.toInt() else scope.colors.keyTextColor)
-            label.paint.isUnderlineText = selected
+            val artwork = categoryArtwork[filter]
+            label.foreground = artwork?.let { if (selected) it.second else it.first }
+            label.setTextColor(when {
+                artwork != null -> Color.TRANSPARENT
+                selected -> 0xFFC51640.toInt()
+                else -> scope.colors.keyTextColor
+            })
+            label.paint.isUnderlineText = artwork == null && selected
         }
     }
 
@@ -937,7 +954,6 @@ class ClipboardWindow(di: DI, private val initialTab: Int = 0) : BoardWindow.Bar
         clipboardLayout.titleUi.actionButton.refreshColors()
         if (::categoryLabels.isInitialized) {
             refreshCategoryLabels()
-            historyCount.setTextColor(scope.colors.keySymbolColor)
         }
         clipboardLayout.titleUi.tabLayout.reconfigureTabs { tabUi, position ->
             configureTab(tabUi, position)
